@@ -421,7 +421,7 @@ function xev0r:KeySystem(opt)
     local saveId      = "xev0r_key_" .. title:lower():gsub("%s", "_")
     local attempts    = 0
     local confirming  = false
-
+ 
     -- Sprawdź zapisany klucz
     if saveKey then
         local ok, saved = pcall(function()
@@ -436,7 +436,7 @@ function xev0r:KeySystem(opt)
             end
         end
     end
-
+ 
     -- ScreenGui
     local sg = New("ScreenGui", {
         Name           = "xev0r_Key",
@@ -445,18 +445,18 @@ function xev0r:KeySystem(opt)
         IgnoreGuiInset = true,
         Parent         = PlayerGui,
     })
-
-    -- [NEW] Blur efekt
+ 
+    -- Blur efekt
     local blur = Instance.new("BlurEffect")
     blur.Size   = 0
     blur.Parent = Lighting
     Tw(blur, { Size = 20 }, 0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-
+ 
     local function removeBlur()
         Tw(blur, { Size = 0 }, 0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
         task.delay(0.45, function() pcall(function() blur:Destroy() end) end)
     end
-
+ 
     -- Overlay
     local overlay = New("Frame", {
         BackgroundColor3       = Color3.fromRGB(0, 0, 0),
@@ -467,28 +467,30 @@ function xev0r:KeySystem(opt)
         Parent                 = sg,
     })
     Tw(overlay, { BackgroundTransparency = 0.45 }, 0.4)
-
-    local CARD_W = 420
-    local CARD_H = (keyLink ~= "") and 312 or 290
-
-    -- [FIX] Karta — animacja przez skalę (AnchorPoint 0.5,0.5)
+ 
+    -- Rozmiary
+    local CARD_W  = 420
+    local HAS_BTN = keyLink ~= ""
+    local CARD_H  = HAS_BTN and 330 or 310
+ 
+    -- Karta — animacja przez skalę
     local card = New("Frame", {
         BackgroundColor3       = Color3.fromRGB(13, 13, 15),
         BackgroundTransparency = 0,
         BorderSizePixel        = 0,
-        Size                   = UDim2.new(0, 0, 0, 0),        -- start: 0x0
+        Size                   = UDim2.new(0, 0, 0, 0),
         Position               = UDim2.new(0.5, 0, 0.5, 0),
         AnchorPoint            = Vector2.new(0.5, 0.5),
-        ClipsDescendants       = false,
+        ClipsDescendants       = true,   -- clips podczas animacji
         ZIndex                 = 2,
         Parent                 = sg,
     })
     Corner(14, card)
     Stroke(Color3.fromRGB(40, 40, 50), 1, card)
-
-    -- [NEW] Animacja wejścia: rośnie ze środka
+ 
+    -- Animacja wejścia
     Tw(card, { Size = UDim2.new(0, CARD_W, 0, CARD_H) }, 0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-
+ 
     -- Górny pasek akcentowy
     local accentBar = New("Frame", {
         BackgroundColor3 = Color3.fromRGB(160, 160, 175),
@@ -506,7 +508,7 @@ function xev0r:KeySystem(opt)
         }),
         Parent = accentBar,
     })
-
+ 
     -- Ikona klucza
     local iconBg = New("Frame", {
         BackgroundColor3 = Color3.fromRGB(20, 20, 25),
@@ -528,7 +530,7 @@ function xev0r:KeySystem(opt)
         ZIndex   = 4,
         Parent   = iconBg,
     })
-
+ 
     -- Tytuł i podtytuł
     New("TextLabel", {
         BackgroundTransparency = 1,
@@ -552,7 +554,7 @@ function xev0r:KeySystem(opt)
         ZIndex     = 3,
         Parent     = card,
     })
-
+ 
     -- Separator
     New("Frame", {
         BackgroundColor3 = Color3.fromRGB(26, 26, 33),
@@ -562,7 +564,7 @@ function xev0r:KeySystem(opt)
         ZIndex           = 3,
         Parent           = card,
     })
-
+ 
     -- Label nad polem
     New("TextLabel", {
         BackgroundTransparency = 1,
@@ -576,7 +578,7 @@ function xev0r:KeySystem(opt)
         ZIndex         = 3,
         Parent         = card,
     })
-
+ 
     -- Pole tekstowe
     local ibg = New("Frame", {
         BackgroundColor3 = Color3.fromRGB(18, 18, 22),
@@ -588,7 +590,7 @@ function xev0r:KeySystem(opt)
     })
     Corner(8, ibg)
     local ibgStroke = Stroke(Color3.fromRGB(32, 32, 42), 1.5, ibg)
-
+ 
     New("TextLabel", {
         BackgroundTransparency = 1,
         Position = UDim2.new(0, 12, 0, 0),
@@ -607,7 +609,8 @@ function xev0r:KeySystem(opt)
         ZIndex           = 4,
         Parent           = ibg,
     })
-
+ 
+    -- [FIX] ZIndex obniżony z 20 → 4, żeby nie blokował kliknięć przycisków
     local ibox = New("TextBox", {
         BackgroundTransparency = 1,
         Position          = UDim2.new(0, 46, 0, 0),
@@ -619,10 +622,10 @@ function xev0r:KeySystem(opt)
         Font              = Enum.Font.GothamMono,
         TextXAlignment    = Enum.TextXAlignment.Left,
         ClearTextOnFocus  = false,
-        ZIndex            = 20,
+        ZIndex            = 4,
         Parent            = ibg,
     })
-
+ 
     -- Kliknięcie na ikonę → focus
     local leftZone = New("TextButton", {
         BackgroundTransparency = 1,
@@ -633,7 +636,7 @@ function xev0r:KeySystem(opt)
         Parent   = ibg,
     })
     leftZone.MouseButton1Click:Connect(function() ibox:CaptureFocus() end)
-
+ 
     ibox.Focused:Connect(function()
         Tw(ibgStroke, { Color = Color3.fromRGB(115, 115, 145) }, 0.15)
         Tw(ibg, { BackgroundColor3 = Color3.fromRGB(21, 21, 26) }, 0.15)
@@ -642,12 +645,12 @@ function xev0r:KeySystem(opt)
         Tw(ibgStroke, { Color = Color3.fromRGB(32, 32, 42) }, 0.15)
         Tw(ibg, { BackgroundColor3 = Color3.fromRGB(18, 18, 22) }, 0.15)
     end)
-
-    -- [NEW] Pasek postępu prób
+ 
+    -- Pasek postępu prób
     local attemptBarBg = New("Frame", {
         BackgroundColor3 = Color3.fromRGB(22, 22, 28),
         BorderSizePixel  = 0,
-        Position         = UDim2.new(0, 20, 0, 209),
+        Position         = UDim2.new(0, 20, 0, 212),
         Size             = UDim2.new(1, -40, 0, 4),
         ZIndex           = 3,
         Parent           = card,
@@ -661,11 +664,11 @@ function xev0r:KeySystem(opt)
         Parent           = attemptBarBg,
     })
     Corner(2, attemptBar)
-
-    -- Status
+ 
+    -- Status label
     local statusLbl = New("TextLabel", {
         BackgroundTransparency = 1,
-        Position       = UDim2.new(0, 22, 0, 216),
+        Position       = UDim2.new(0, 22, 0, 220),
         Size           = UDim2.new(1, -44, 0, 14),
         Text           = "",
         TextColor3     = T.Danger,
@@ -675,18 +678,19 @@ function xev0r:KeySystem(opt)
         ZIndex         = 3,
         Parent         = card,
     })
-
-    -- Przyciski
-    local BTN_Y = 236
+ 
+    -- ── Przyciski ────────────────────────────────────────────────────────────
+    local BTN_Y = 242
     local BTN_H = 36
     local PAD   = 20
     local GAP   = 8
-    local cX    = PAD
-    local cW    = CARD_W - PAD * 2
-
-    if keyLink ~= "" then
+ 
+    local cX = PAD
+    local cW = CARD_W - PAD * 2
+ 
+    if HAS_BTN then
         cW = math.floor((CARD_W - PAD * 2 - GAP) / 2)
-
+ 
         local getBtn = New("TextButton", {
             BackgroundColor3 = Color3.fromRGB(18, 18, 23),
             BorderSizePixel  = 0,
@@ -701,7 +705,7 @@ function xev0r:KeySystem(opt)
         })
         Corner(8, getBtn)
         Stroke(Color3.fromRGB(30, 30, 40), 1.5, getBtn)
-
+ 
         getBtn.MouseEnter:Connect(function()
             Tw(getBtn, { BackgroundColor3 = Color3.fromRGB(24, 24, 30) }, 0.1)
             getBtn.TextColor3 = Color3.fromRGB(140, 140, 162)
@@ -718,10 +722,10 @@ function xev0r:KeySystem(opt)
                 if statusLbl and statusLbl.Parent then statusLbl.Text = "" end
             end)
         end)
-
+ 
         cX = PAD + cW + GAP
     end
-
+ 
     local confirmBtn = New("TextButton", {
         BackgroundColor3 = Color3.fromRGB(36, 36, 48),
         BorderSizePixel  = 0,
@@ -736,7 +740,7 @@ function xev0r:KeySystem(opt)
     })
     Corner(8, confirmBtn)
     local confirmStroke = Stroke(Color3.fromRGB(60, 60, 78), 1.5, confirmBtn)
-
+ 
     confirmBtn.MouseEnter:Connect(function()
         Tw(confirmBtn, { BackgroundColor3 = Color3.fromRGB(48, 48, 62) }, 0.1)
         Tw(confirmStroke, { Color = Color3.fromRGB(115, 115, 145) }, 0.1)
@@ -745,8 +749,8 @@ function xev0r:KeySystem(opt)
         Tw(confirmBtn, { BackgroundColor3 = Color3.fromRGB(36, 36, 48) }, 0.1)
         Tw(confirmStroke, { Color = Color3.fromRGB(60, 60, 78) }, 0.1)
     end)
-
-    -- [FIX] Shake — używa offsetu względem centrum (AnchorPoint 0.5, 0.5)
+ 
+    -- Shake — używa offsetu względem centrum (AnchorPoint 0.5, 0.5)
     local function shakeCard()
         for _, ox in ipairs({ 12, -12, 8, -8, 4, -4, 0 }) do
             card.Position = UDim2.new(0.5, ox, 0.5, 0)
@@ -754,15 +758,15 @@ function xev0r:KeySystem(opt)
         end
         card.Position = UDim2.new(0.5, 0, 0.5, 0)
     end
-
-    -- [NEW] Animacja paska prób (zielony → żółty → czerwony)
+ 
+    -- Pasek prób: zielony → żółty → czerwony
     local function updateAttemptBar()
-        local pct = 1 - (attempts / maxAttempts)
+        local pct    = 1 - (attempts / maxAttempts)
         local barCol = pct > 0.5 and T.Success
             or (pct > 0.25 and T.Warning or T.Danger)
         Tw(attemptBar, { Size = UDim2.new(pct, 0, 1, 0), BackgroundColor3 = barCol }, 0.25)
     end
-
+ 
     local function kickPlayer()
         Tw(card, { Size = UDim2.new(0, 0, 0, 0) }, 0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In)
         Tw(overlay, { BackgroundTransparency = 1 }, 0.35)
@@ -775,20 +779,19 @@ function xev0r:KeySystem(opt)
             .. (keyLink ~= "" and ("Pobierz klucz: " .. keyLink) or "Skontaktuj się z administratorem.")
         )
     end
-
+ 
     local function tryConfirm()
         if confirming then return end
         confirming = true
-
+ 
         local inputKey = ibox.Text
         local valid    = false
-
+ 
         for _, k in ipairs(validKeys) do
             if k == inputKey then valid = true; break end
         end
-
+ 
         if valid then
-            -- Poprawny klucz
             statusLbl.TextColor3  = T.Success
             statusLbl.Text        = "Poprawny klucz — ładowanie..."
             confirmBtn.Text       = "Zatwierdzono ✓"
@@ -797,13 +800,12 @@ function xev0r:KeySystem(opt)
             Tw(ibgStroke, { Color = T.Success }, 0.2)
             Tw(ibg, { BackgroundColor3 = Color3.fromRGB(14, 28, 18) }, 0.2)
             Tw(attemptBar, { BackgroundColor3 = T.Success, Size = UDim2.new(1, 0, 1, 0) }, 0.2)
-
+ 
             if saveKey and writefile then
                 pcall(writefile, saveId .. ".txt", inputKey)
             end
-
+ 
             task.wait(0.8)
-            -- [NEW] Zamknięcie: shrink do środka
             Tw(card, { Size = UDim2.new(0, 0, 0, 0) }, 0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In)
             Tw(overlay, { BackgroundTransparency = 1 }, 0.35)
             task.wait(0.35)
@@ -812,19 +814,18 @@ function xev0r:KeySystem(opt)
             sg:Destroy()
             callback()
         else
-            -- Błędny klucz
             attempts   = attempts + 1
             confirming = false
-
+ 
             shakeCard()
             updateAttemptBar()
             Tw(ibg, { BackgroundColor3 = Color3.fromRGB(36, 14, 14) }, 0.1)
             Tw(ibgStroke, { Color = T.Danger }, 0.1)
-
+ 
             if attempts >= maxAttempts then
-                statusLbl.TextColor3 = T.Danger
-                statusLbl.Text       = "Zbyt wiele błędów — wyrzucanie..."
-                confirmBtn.Text      = "Wyrzucanie..."
+                statusLbl.TextColor3  = T.Danger
+                statusLbl.Text        = "Zbyt wiele błędów — wyrzucanie..."
+                confirmBtn.Text       = "Wyrzucanie..."
                 confirmBtn.TextColor3 = T.Danger
                 task.wait(1.4)
                 kickPlayer()
@@ -838,7 +839,7 @@ function xev0r:KeySystem(opt)
             end
         end
     end
-
+ 
     confirmBtn.MouseButton1Click:Connect(tryConfirm)
     ibox.FocusLost:Connect(function(enter)
         if enter then tryConfirm() end
