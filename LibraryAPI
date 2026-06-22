@@ -429,15 +429,11 @@ function xev0r:KeySystem(opt)
         end)
         if ok and saved and saved ~= "" then
             for _, k in ipairs(validKeys) do
-                if k == saved then
-                    callback()
-                    return
-                end
+                if k == saved then callback(); return end
             end
         end
     end
  
-    -- ScreenGui
     local sg = New("ScreenGui", {
         Name           = "xev0r_Key",
         ResetOnSpawn   = false,
@@ -446,52 +442,34 @@ function xev0r:KeySystem(opt)
         Parent         = PlayerGui,
     })
  
-    -- Blur efekt
-    local blur = Instance.new("BlurEffect")
-    blur.Size   = 0
-    blur.Parent = Lighting
-    Tw(blur, { Size = 20 }, 0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
- 
-    local function removeBlur()
-        Tw(blur, { Size = 0 }, 0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-        task.delay(0.45, function() pcall(function() blur:Destroy() end) end)
-    end
- 
     -- Overlay
-    local overlay = New("Frame", {
+    New("Frame", {
         BackgroundColor3       = Color3.fromRGB(0, 0, 0),
-        BackgroundTransparency = 1,
+        BackgroundTransparency = 0.45,
         Size                   = UDim2.new(1, 0, 1, 0),
         BorderSizePixel        = 0,
         ZIndex                 = 1,
         Parent                 = sg,
     })
-    Tw(overlay, { BackgroundTransparency = 0.45 }, 0.4)
  
-    -- Rozmiary
-    local CARD_W  = 420
-    local HAS_BTN = keyLink ~= ""
-    local CARD_H  = HAS_BTN and 330 or 310
+    local CARD_W = 420
+    local HAS_LINK = keyLink ~= ""
+    local CARD_H = HAS_LINK and 330 or 310
  
-    -- Karta — animacja przez skalę
+    -- Karta
     local card = New("Frame", {
-        BackgroundColor3       = Color3.fromRGB(13, 13, 15),
-        BackgroundTransparency = 0,
-        BorderSizePixel        = 0,
-        Size                   = UDim2.new(0, 0, 0, 0),
-        Position               = UDim2.new(0.5, 0, 0.5, 0),
-        AnchorPoint            = Vector2.new(0.5, 0.5),
-        ClipsDescendants       = true,   -- clips podczas animacji
-        ZIndex                 = 2,
-        Parent                 = sg,
+        BackgroundColor3 = Color3.fromRGB(13, 13, 15),
+        BorderSizePixel  = 0,
+        Size             = UDim2.new(0, CARD_W, 0, CARD_H),
+        Position         = UDim2.new(0.5, 0, 0.5, 0),
+        AnchorPoint      = Vector2.new(0.5, 0.5),
+        ZIndex           = 2,
+        Parent           = sg,
     })
     Corner(14, card)
     Stroke(Color3.fromRGB(40, 40, 50), 1, card)
  
-    -- Animacja wejścia
-    Tw(card, { Size = UDim2.new(0, CARD_W, 0, CARD_H) }, 0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
- 
-    -- Górny pasek akcentowy
+    -- Górny pasek
     local accentBar = New("Frame", {
         BackgroundColor3 = Color3.fromRGB(160, 160, 175),
         BorderSizePixel  = 0,
@@ -509,7 +487,7 @@ function xev0r:KeySystem(opt)
         Parent = accentBar,
     })
  
-    -- Ikona klucza
+    -- Ikona
     local iconBg = New("Frame", {
         BackgroundColor3 = Color3.fromRGB(20, 20, 25),
         BorderSizePixel  = 0,
@@ -531,7 +509,7 @@ function xev0r:KeySystem(opt)
         Parent   = iconBg,
     })
  
-    -- Tytuł i podtytuł
+    -- Tytuł
     New("TextLabel", {
         BackgroundTransparency = 1,
         Position   = UDim2.new(0, 0, 0, 88),
@@ -543,6 +521,8 @@ function xev0r:KeySystem(opt)
         ZIndex     = 3,
         Parent     = card,
     })
+ 
+    -- Podtytuł
     New("TextLabel", {
         BackgroundTransparency = 1,
         Position   = UDim2.new(0, 0, 0, 113),
@@ -565,7 +545,7 @@ function xev0r:KeySystem(opt)
         Parent           = card,
     })
  
-    -- Label nad polem
+    -- Label
     New("TextLabel", {
         BackgroundTransparency = 1,
         Position       = UDim2.new(0, 22, 0, 148),
@@ -579,7 +559,7 @@ function xev0r:KeySystem(opt)
         Parent         = card,
     })
  
-    -- Pole tekstowe
+    -- Pole input
     local ibg = New("Frame", {
         BackgroundColor3 = Color3.fromRGB(18, 18, 22),
         BorderSizePixel  = 0,
@@ -610,7 +590,6 @@ function xev0r:KeySystem(opt)
         Parent           = ibg,
     })
  
-    -- [FIX] ZIndex obniżony z 20 → 4, żeby nie blokował kliknięć przycisków
     local ibox = New("TextBox", {
         BackgroundTransparency = 1,
         Position          = UDim2.new(0, 46, 0, 0),
@@ -626,27 +605,25 @@ function xev0r:KeySystem(opt)
         Parent            = ibg,
     })
  
-    -- Kliknięcie na ikonę → focus
-    local leftZone = New("TextButton", {
+    New("TextButton", {
         BackgroundTransparency = 1,
         Position = UDim2.new(0, 0, 0, 0),
         Size     = UDim2.new(0, 46, 1, 0),
         Text     = "",
         ZIndex   = 5,
         Parent   = ibg,
-    })
-    leftZone.MouseButton1Click:Connect(function() ibox:CaptureFocus() end)
+    }).MouseButton1Click:Connect(function() ibox:CaptureFocus() end)
  
     ibox.Focused:Connect(function()
-        Tw(ibgStroke, { Color = Color3.fromRGB(115, 115, 145) }, 0.15)
-        Tw(ibg, { BackgroundColor3 = Color3.fromRGB(21, 21, 26) }, 0.15)
+        ibgStroke.Color = Color3.fromRGB(115, 115, 145)
+        ibg.BackgroundColor3 = Color3.fromRGB(21, 21, 26)
     end)
     ibox.FocusLost:Connect(function()
-        Tw(ibgStroke, { Color = Color3.fromRGB(32, 32, 42) }, 0.15)
-        Tw(ibg, { BackgroundColor3 = Color3.fromRGB(18, 18, 22) }, 0.15)
+        ibgStroke.Color = Color3.fromRGB(32, 32, 42)
+        ibg.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
     end)
  
-    -- Pasek postępu prób
+    -- Pasek prób
     local attemptBarBg = New("Frame", {
         BackgroundColor3 = Color3.fromRGB(22, 22, 28),
         BorderSizePixel  = 0,
@@ -665,7 +642,7 @@ function xev0r:KeySystem(opt)
     })
     Corner(2, attemptBar)
  
-    -- Status label
+    -- Status
     local statusLbl = New("TextLabel", {
         BackgroundTransparency = 1,
         Position       = UDim2.new(0, 22, 0, 220),
@@ -679,16 +656,15 @@ function xev0r:KeySystem(opt)
         Parent         = card,
     })
  
-    -- ── Przyciski ────────────────────────────────────────────────────────────
+    -- Przyciski
     local BTN_Y = 242
     local BTN_H = 36
     local PAD   = 20
     local GAP   = 8
+    local cX    = PAD
+    local cW    = CARD_W - PAD * 2
  
-    local cX = PAD
-    local cW = CARD_W - PAD * 2
- 
-    if HAS_BTN then
+    if HAS_LINK then
         cW = math.floor((CARD_W - PAD * 2 - GAP) / 2)
  
         local getBtn = New("TextButton", {
@@ -706,14 +682,6 @@ function xev0r:KeySystem(opt)
         Corner(8, getBtn)
         Stroke(Color3.fromRGB(30, 30, 40), 1.5, getBtn)
  
-        getBtn.MouseEnter:Connect(function()
-            Tw(getBtn, { BackgroundColor3 = Color3.fromRGB(24, 24, 30) }, 0.1)
-            getBtn.TextColor3 = Color3.fromRGB(140, 140, 162)
-        end)
-        getBtn.MouseLeave:Connect(function()
-            Tw(getBtn, { BackgroundColor3 = Color3.fromRGB(18, 18, 23) }, 0.1)
-            getBtn.TextColor3 = Color3.fromRGB(90, 90, 108)
-        end)
         getBtn.MouseButton1Click:Connect(function()
             if setclipboard then setclipboard(keyLink) end
             statusLbl.TextColor3 = T.Info
@@ -739,45 +707,23 @@ function xev0r:KeySystem(opt)
         Parent           = card,
     })
     Corner(8, confirmBtn)
-    local confirmStroke = Stroke(Color3.fromRGB(60, 60, 78), 1.5, confirmBtn)
- 
-    confirmBtn.MouseEnter:Connect(function()
-        Tw(confirmBtn, { BackgroundColor3 = Color3.fromRGB(48, 48, 62) }, 0.1)
-        Tw(confirmStroke, { Color = Color3.fromRGB(115, 115, 145) }, 0.1)
-    end)
-    confirmBtn.MouseLeave:Connect(function()
-        Tw(confirmBtn, { BackgroundColor3 = Color3.fromRGB(36, 36, 48) }, 0.1)
-        Tw(confirmStroke, { Color = Color3.fromRGB(60, 60, 78) }, 0.1)
-    end)
- 
-    -- Shake — używa offsetu względem centrum (AnchorPoint 0.5, 0.5)
-    local function shakeCard()
-        for _, ox in ipairs({ 12, -12, 8, -8, 4, -4, 0 }) do
-            card.Position = UDim2.new(0.5, ox, 0.5, 0)
-            task.wait(0.04)
-        end
-        card.Position = UDim2.new(0.5, 0, 0.5, 0)
-    end
- 
-    -- Pasek prób: zielony → żółty → czerwony
-    local function updateAttemptBar()
-        local pct    = 1 - (attempts / maxAttempts)
-        local barCol = pct > 0.5 and T.Success
-            or (pct > 0.25 and T.Warning or T.Danger)
-        Tw(attemptBar, { Size = UDim2.new(pct, 0, 1, 0), BackgroundColor3 = barCol }, 0.25)
-    end
+    Stroke(Color3.fromRGB(60, 60, 78), 1.5, confirmBtn)
  
     local function kickPlayer()
-        Tw(card, { Size = UDim2.new(0, 0, 0, 0) }, 0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In)
-        Tw(overlay, { BackgroundTransparency = 1 }, 0.35)
-        task.wait(0.35)
-        removeBlur()
-        task.wait(0.2)
+        sg:Destroy()
+        task.wait(0.1)
         Players.LocalPlayer:Kick(
             "[xev0r] Nieprawidłowy klucz dostępu.\n"
             .. "Zostałeś wyrzucony za podanie błędnego klucza.\n"
-            .. (keyLink ~= "" and ("Pobierz klucz: " .. keyLink) or "Skontaktuj się z administratorem.")
+            .. (HAS_LINK and ("Pobierz klucz: " .. keyLink) or "Skontaktuj się z administratorem.")
         )
+    end
+ 
+    local function updateAttemptBar()
+        local pct    = 1 - (attempts / maxAttempts)
+        local barCol = pct > 0.5 and T.Success or (pct > 0.25 and T.Warning or T.Danger)
+        attemptBar.Size             = UDim2.new(pct, 0, 1, 0)
+        attemptBar.BackgroundColor3 = barCol
     end
  
     local function tryConfirm()
@@ -786,7 +732,6 @@ function xev0r:KeySystem(opt)
  
         local inputKey = ibox.Text
         local valid    = false
- 
         for _, k in ipairs(validKeys) do
             if k == inputKey then valid = true; break end
         end
@@ -796,46 +741,35 @@ function xev0r:KeySystem(opt)
             statusLbl.Text        = "Poprawny klucz — ładowanie..."
             confirmBtn.Text       = "Zatwierdzono ✓"
             confirmBtn.TextColor3 = T.Success
-            Tw(confirmStroke, { Color = T.Success }, 0.2)
-            Tw(ibgStroke, { Color = T.Success }, 0.2)
-            Tw(ibg, { BackgroundColor3 = Color3.fromRGB(14, 28, 18) }, 0.2)
-            Tw(attemptBar, { BackgroundColor3 = T.Success, Size = UDim2.new(1, 0, 1, 0) }, 0.2)
  
             if saveKey and writefile then
                 pcall(writefile, saveId .. ".txt", inputKey)
             end
  
-            task.wait(0.8)
-            Tw(card, { Size = UDim2.new(0, 0, 0, 0) }, 0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In)
-            Tw(overlay, { BackgroundTransparency = 1 }, 0.35)
-            task.wait(0.35)
-            removeBlur()
-            task.wait(0.1)
+            task.wait(0.6)
             sg:Destroy()
             callback()
         else
             attempts   = attempts + 1
             confirming = false
  
-            shakeCard()
+            ibg.BackgroundColor3 = Color3.fromRGB(36, 14, 14)
+            ibgStroke.Color      = T.Danger
             updateAttemptBar()
-            Tw(ibg, { BackgroundColor3 = Color3.fromRGB(36, 14, 14) }, 0.1)
-            Tw(ibgStroke, { Color = T.Danger }, 0.1)
  
             if attempts >= maxAttempts then
                 statusLbl.TextColor3  = T.Danger
                 statusLbl.Text        = "Zbyt wiele błędów — wyrzucanie..."
                 confirmBtn.Text       = "Wyrzucanie..."
                 confirmBtn.TextColor3 = T.Danger
-                task.wait(1.4)
+                task.wait(1.2)
                 kickPlayer()
             else
-                local left = maxAttempts - attempts
                 statusLbl.TextColor3 = T.Danger
-                statusLbl.Text = "Nieprawidłowy klucz. Pozostało prób: " .. left
-                task.wait(0.5)
-                Tw(ibg, { BackgroundColor3 = Color3.fromRGB(18, 18, 22) }, 0.2)
-                Tw(ibgStroke, { Color = Color3.fromRGB(32, 32, 42) }, 0.2)
+                statusLbl.Text       = "Nieprawidłowy klucz. Pozostało prób: " .. (maxAttempts - attempts)
+                task.wait(0.4)
+                ibg.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
+                ibgStroke.Color      = Color3.fromRGB(32, 32, 42)
             end
         end
     end
