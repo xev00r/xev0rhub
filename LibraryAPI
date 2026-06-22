@@ -274,111 +274,398 @@ end
 --[[
     xev0r:KeySystem(options)
     options:
-        Title    [string]         - tytuł okna
-        Subtitle [string]         - podtytuł
-        Keys     [table<string>]  - lista ważnych kluczy
-        KeyLink  [string]         - link do pobrania klucza (kopiowany do schowka)
-        SaveKey  [bool]           - zapamiętaj klucz lokalnie (domyślnie true)
-        Callback [function]       - wywołana po poprawnym kluczu
+        Title      [string]         - tytuł okna
+        Subtitle   [string]         - podtytuł
+        Keys       [table<string>]  - lista ważnych kluczy
+        KeyLink    [string]         - link do pobrania klucza
+        SaveKey    [bool]           - zapamiętaj klucz lokalnie (domyślnie true)
+        MaxAttempts [number]        - ile prób przed kickiem (domyślnie 1)
+        Callback   [function]       - wywołana po poprawnym kluczu
 ]]
 function xev0r:KeySystem(opt)
     opt = opt or {}
-    local validKeys = opt.Keys     or {"xev0r-free"}
-    local title     = opt.Title    or "xev0r"
-    local subtitle  = opt.Subtitle or "Wpisz klucz aby kontynuować"
-    local keyLink   = opt.KeyLink  or ""
-    local saveKey   = opt.SaveKey  ~= false
-    local callback  = opt.Callback or function() end
-    local saveId    = "xev0r_key_"..title:lower():gsub("%s","_")
-
-    -- check saved key
+    local validKeys   = opt.Keys        or {"xev0r-free"}
+    local title       = opt.Title       or "xev0r"
+    local subtitle    = opt.Subtitle    or "Wpisz klucz aby kontynuować"
+    local keyLink     = opt.KeyLink     or ""
+    local saveKey     = opt.SaveKey     ~= false
+    local maxAttempts = opt.MaxAttempts or 1
+    local callback    = opt.Callback    or function() end
+    local saveId      = "xev0r_key_"..title:lower():gsub("%s","_")
+    local attempts    = 0
+ 
+    -- ── Sprawdź zapisany klucz ────────────────────────────────────────────────
     if saveKey then
-        local ok, saved = pcall(function() return readfile and readfile(saveId..".txt") or nil end)
+        local ok, saved = pcall(function()
+            return readfile and readfile(saveId..".txt") or nil
+        end)
         if ok and saved then
-            for _,k in ipairs(validKeys) do
+            for _, k in ipairs(validKeys) do
                 if k == saved then callback(); return end
             end
         end
     end
-
-    local sg = New("ScreenGui",{Name="xev0r_Key",ResetOnSpawn=false,
-        ZIndexBehavior=Enum.ZIndexBehavior.Sibling,Parent=PlayerGui})
-    New("Frame",{BackgroundColor3=T.Black,BackgroundTransparency=0.48,
-        Size=UDim2.new(1,0,1,0),BorderSizePixel=0,Parent=sg})
-
-    local card=New("Frame",{BackgroundColor3=T.Surface,BorderSizePixel=0,
-        Size=UDim2.new(0,375,0,248),Position=UDim2.new(0.5,0,0.5,0),
-        AnchorPoint=Vector2.new(0.5,0.5),Parent=sg})
-    Corner(12,card); Stroke(T.Border,1,card)
-
-    local strip=New("Frame",{BackgroundColor3=T.BorderLight,BorderSizePixel=0,
-        Size=UDim2.new(1,0,0,2),Parent=card}); Corner(12,strip)
-
-    local iconBg=New("Frame",{BackgroundColor3=T.SurfaceAct,BorderSizePixel=0,
-        Size=UDim2.new(0,44,0,44),Position=UDim2.new(0.5,0,0,20),
-        AnchorPoint=Vector2.new(0.5,0),Parent=card}); Corner(10,iconBg)
-    New("TextLabel",{BackgroundTransparency=1,Size=UDim2.new(1,0,1,0),
-        Text="🔑",TextSize=20,Font=Enum.Font.Gotham,Parent=iconBg})
-
-    New("TextLabel",{BackgroundTransparency=1,Position=UDim2.new(0,18,0,74),
-        Size=UDim2.new(1,-36,0,20),Text=title,TextColor3=T.TextPri,TextSize=15,
-        Font=Enum.Font.GothamBold,Parent=card})
-    New("TextLabel",{BackgroundTransparency=1,Position=UDim2.new(0,18,0,94),
-        Size=UDim2.new(1,-36,0,16),Text=subtitle,TextColor3=T.TextSec,TextSize=10,
-        Font=Enum.Font.Gotham,Parent=card})
-
-    local ibg=New("Frame",{BackgroundColor3=T.SurfaceAct,BorderSizePixel=0,
-        Size=UDim2.new(1,-36,0,36),Position=UDim2.new(0,18,0,120),Parent=card})
-    Corner(7,ibg); Stroke(T.Border,1,ibg)
-    local ibox=New("TextBox",{BackgroundTransparency=1,
-        Position=UDim2.new(0,10,0,0),Size=UDim2.new(1,-20,1,0),
-        PlaceholderText="Wpisz klucz...",PlaceholderColor3=T.TextMut,
-        TextColor3=T.TextPri,TextSize=11,Font=Enum.Font.GothamMono,
-        TextXAlignment=Enum.TextXAlignment.Left,ClearTextOnFocus=false,Parent=ibg})
+ 
+    -- ── ScreenGui ─────────────────────────────────────────────────────────────
+    local sg = New("ScreenGui", {
+        Name            = "xev0r_Key",
+        ResetOnSpawn    = false,
+        ZIndexBehavior  = Enum.ZIndexBehavior.Sibling,
+        IgnoreGuiInset  = true,
+        Parent          = PlayerGui,
+    })
+ 
+    -- ── BLUR (Lighting DepthOfField) ──────────────────────────────────────────
+    local Lighting = game:GetService("Lighting")
+    local blur = Instance.new("BlurEffect")
+    blur.Size  = 0
+    blur.Parent = Lighting
+    Tw(blur, { Size = 20 }, 0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+ 
+    local function removeBlur()
+        Tw(blur, { Size = 0 }, 0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        task.delay(0.45, function() blur:Destroy() end)
+    end
+ 
+    -- ── Overlay ciemny ────────────────────────────────────────────────────────
+    local overlay = New("Frame", {
+        BackgroundColor3    = Color3.fromRGB(0, 0, 0),
+        BackgroundTransparency = 1,
+        Size                = UDim2.new(1, 0, 1, 0),
+        BorderSizePixel     = 0,
+        ZIndex              = 1,
+        Parent              = sg,
+    })
+    Tw(overlay, { BackgroundTransparency = 0.55 }, 0.45)
+ 
+    -- ── KARTA ─────────────────────────────────────────────────────────────────
+    local CARD_W, CARD_H = 400, 290
+ 
+    local card = New("Frame", {
+        BackgroundColor3    = Color3.fromRGB(14, 14, 16),
+        BorderSizePixel     = 0,
+        Size                = UDim2.new(0, CARD_W, 0, 0),
+        Position            = UDim2.new(0.5, 0, 0.5, 0),
+        AnchorPoint         = Vector2.new(0.5, 0.5),
+        ClipsDescendants    = true,
+        ZIndex              = 2,
+        Parent              = sg,
+    })
+    Corner(14, card)
+    Stroke(Color3.fromRGB(38, 38, 44), 1, card)
+ 
+    -- Animacja wejścia karty
+    Tw(card, { Size = UDim2.new(0, CARD_W, 0, CARD_H) }, 0.38,
+        Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+ 
+    -- ── Górny pasek akcentowy (gradient) ─────────────────────────────────────
+    local accentBar = New("Frame", {
+        BackgroundColor3 = Color3.fromRGB(160, 160, 175),
+        BorderSizePixel  = 0,
+        Size             = UDim2.new(1, 0, 0, 2),
+        ZIndex           = 3,
+        Parent           = card,
+    })
+    New("UIGradient", {
+        Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0,    Color3.fromRGB(80, 80, 95)),
+            ColorSequenceKeypoint.new(0.5,  Color3.fromRGB(180, 180, 200)),
+            ColorSequenceKeypoint.new(1,    Color3.fromRGB(80, 80, 95)),
+        }),
+        Parent = accentBar,
+    })
+ 
+    -- ── Ikona klucza ─────────────────────────────────────────────────────────
+    local iconRing = New("Frame", {
+        BackgroundColor3 = Color3.fromRGB(22, 22, 26),
+        BorderSizePixel  = 0,
+        Size             = UDim2.new(0, 52, 0, 52),
+        Position         = UDim2.new(0.5, 0, 0, 22),
+        AnchorPoint      = Vector2.new(0.5, 0),
+        ZIndex           = 3,
+        Parent           = card,
+    })
+    Corner(14, iconRing)
+    Stroke(Color3.fromRGB(45, 45, 52), 1.5, iconRing)
+ 
+    New("TextLabel", {
+        BackgroundTransparency = 1,
+        Size   = UDim2.new(1, 0, 1, 0),
+        Text   = "🔑",
+        TextSize = 22,
+        Font   = Enum.Font.Gotham,
+        ZIndex = 4,
+        Parent = iconRing,
+    })
+ 
+    -- ── Tytuł ─────────────────────────────────────────────────────────────────
+    New("TextLabel", {
+        BackgroundTransparency = 1,
+        Position  = UDim2.new(0, 0, 0, 84),
+        Size      = UDim2.new(1, 0, 0, 22),
+        Text      = title,
+        TextColor3 = Color3.fromRGB(235, 235, 242),
+        TextSize  = 16,
+        Font      = Enum.Font.GothamBold,
+        ZIndex    = 3,
+        Parent    = card,
+    })
+ 
+    New("TextLabel", {
+        BackgroundTransparency = 1,
+        Position  = UDim2.new(0, 0, 0, 107),
+        Size      = UDim2.new(1, 0, 0, 16),
+        Text      = subtitle,
+        TextColor3 = Color3.fromRGB(100, 100, 112),
+        TextSize  = 10,
+        Font      = Enum.Font.Gotham,
+        ZIndex    = 3,
+        Parent    = card,
+    })
+ 
+    -- ── Separator ─────────────────────────────────────────────────────────────
+    New("Frame", {
+        BackgroundColor3 = Color3.fromRGB(30, 30, 35),
+        BorderSizePixel  = 0,
+        Position         = UDim2.new(0, 20, 0, 132),
+        Size             = UDim2.new(1, -40, 0, 1),
+        ZIndex           = 3,
+        Parent           = card,
+    })
+ 
+    -- ── Label "Klucz dostępu" ─────────────────────────────────────────────────
+    New("TextLabel", {
+        BackgroundTransparency = 1,
+        Position  = UDim2.new(0, 22, 0, 143),
+        Size      = UDim2.new(1, -44, 0, 14),
+        Text      = "KLUCZ DOSTĘPU",
+        TextColor3 = Color3.fromRGB(80, 80, 92),
+        TextSize  = 9,
+        Font      = Enum.Font.GothamBold,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex    = 3,
+        Parent    = card,
+    })
+ 
+    -- ── Input Box ────────────────────────────────────────────────────────────
+    local ibg = New("Frame", {
+        BackgroundColor3 = Color3.fromRGB(20, 20, 23),
+        BorderSizePixel  = 0,
+        Position         = UDim2.new(0, 20, 0, 160),
+        Size             = UDim2.new(1, -40, 0, 38),
+        ZIndex           = 3,
+        Parent           = card,
+    })
+    Corner(8, ibg)
+    local ibgStroke = Stroke(Color3.fromRGB(36, 36, 42), 1.5, ibg)
+ 
+    -- Lock icon w polu
+    New("TextLabel", {
+        BackgroundTransparency = 1,
+        Position  = UDim2.new(0, 10, 0, 0),
+        Size      = UDim2.new(0, 20, 1, 0),
+        Text      = "🔒",
+        TextSize  = 12,
+        Font      = Enum.Font.Gotham,
+        ZIndex    = 4,
+        Parent    = ibg,
+    })
+ 
+    local ibox = New("TextBox", {
+        BackgroundTransparency = 1,
+        Position       = UDim2.new(0, 34, 0, 0),
+        Size           = UDim2.new(1, -46, 1, 0),
+        PlaceholderText = "xxxx-xxxx-xxxx-xxxx",
+        PlaceholderColor3 = Color3.fromRGB(55, 55, 65),
+        TextColor3     = Color3.fromRGB(210, 210, 220),
+        TextSize       = 11,
+        Font           = Enum.Font.GothamMono,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ClearTextOnFocus = false,
+        ZIndex         = 4,
+        Parent         = ibg,
+    })
+ 
     ibox.Focused:Connect(function()
-        Tw(ibg:FindFirstChildOfClass("UIStroke"),{Color=T.Accent},0.12)
+        Tw(ibgStroke, { Color = Color3.fromRGB(130, 130, 155), Thickness = 1.5 }, 0.15)
+        Tw(ibg, { BackgroundColor3 = Color3.fromRGB(24, 24, 28) }, 0.15)
     end)
     ibox.FocusLost:Connect(function()
-        Tw(ibg:FindFirstChildOfClass("UIStroke"),{Color=T.Border},0.12)
+        Tw(ibgStroke, { Color = Color3.fromRGB(36, 36, 42), Thickness = 1.5 }, 0.15)
+        Tw(ibg, { BackgroundColor3 = Color3.fromRGB(20, 20, 23) }, 0.15)
     end)
-
-    local statusLbl=New("TextLabel",{BackgroundTransparency=1,
-        Position=UDim2.new(0,18,0,163),Size=UDim2.new(1,-36,0,14),
-        Text="",TextColor3=T.Danger,TextSize=10,Font=Enum.Font.Gotham,
-        TextXAlignment=Enum.TextXAlignment.Left,Parent=card})
-
-    local confirmBtn=New("TextButton",{BackgroundColor3=T.SurfaceHov,BorderSizePixel=0,
-        Size=UDim2.new(0,145,0,32),Position=UDim2.new(1,-163,0,202),
-        Text="Potwierdź klucz",TextColor3=T.TextPri,TextSize=11,
-        Font=Enum.Font.GothamBold,Parent=card})
-    Corner(7,confirmBtn); Stroke(T.Border,1,confirmBtn)
-
-    if keyLink~="" then
-        local gb=New("TextButton",{BackgroundColor3=T.Surface,BorderSizePixel=0,
-            Size=UDim2.new(0,110,0,32),Position=UDim2.new(0,18,0,202),
-            Text="Pobierz klucz",TextColor3=T.TextSec,TextSize=11,
-            Font=Enum.Font.Gotham,Parent=card})
-        Corner(7,gb); Stroke(T.Border,1,gb)
-        gb.MouseButton1Click:Connect(function()
-            if setclipboard then setclipboard(keyLink) end
-            xev0r:Notify({Title="xev0r",Message="Link skopiowany do schowka!",Type="info"})
+ 
+    -- ── Status label ──────────────────────────────────────────────────────────
+    local statusLbl = New("TextLabel", {
+        BackgroundTransparency = 1,
+        Position  = UDim2.new(0, 22, 0, 202),
+        Size      = UDim2.new(1, -44, 0, 14),
+        Text      = "",
+        TextColor3 = T.Danger,
+        TextSize  = 9,
+        Font      = Enum.Font.Gotham,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex    = 3,
+        Parent    = card,
+    })
+ 
+    -- ── Przyciski ─────────────────────────────────────────────────────────────
+    -- Przycisk "Pobierz klucz" (opcjonalny)
+    local btnStartX = 20
+    local confirmW  = CARD_W - 40
+ 
+    if keyLink ~= "" then
+        confirmW = math.floor((CARD_W - 48) / 2)
+        local getBtn = New("TextButton", {
+            BackgroundColor3 = Color3.fromRGB(20, 20, 24),
+            BorderSizePixel  = 0,
+            Position         = UDim2.new(0, 20, 0, 220),
+            Size             = UDim2.new(0, confirmW, 0, 34),
+            Text             = "📋  Pobierz klucz",
+            TextColor3       = Color3.fromRGB(100, 100, 115),
+            TextSize         = 10,
+            Font             = Enum.Font.GothamBold,
+            ZIndex           = 3,
+            Parent           = card,
+        })
+        Corner(8, getBtn)
+        Stroke(Color3.fromRGB(32, 32, 38), 1.5, getBtn)
+ 
+        getBtn.MouseEnter:Connect(function()
+            Tw(getBtn, { BackgroundColor3 = Color3.fromRGB(26, 26, 30) }, 0.1)
+            getBtn.TextColor3 = Color3.fromRGB(150, 150, 165)
         end)
+        getBtn.MouseLeave:Connect(function()
+            Tw(getBtn, { BackgroundColor3 = Color3.fromRGB(20, 20, 24) }, 0.1)
+            getBtn.TextColor3 = Color3.fromRGB(100, 100, 115)
+        end)
+        getBtn.MouseButton1Click:Connect(function()
+            if setclipboard then setclipboard(keyLink) end
+            statusLbl.TextColor3 = T.Info
+            statusLbl.Text = "✓ Link skopiowany do schowka!"
+            task.delay(2, function() if statusLbl.Parent then statusLbl.Text = "" end end)
+        end)
+ 
+        btnStartX = 20 + confirmW + 8
     end
-
-    confirmBtn.MouseEnter:Connect(function() Tw(confirmBtn,{BackgroundColor3=T.SurfaceAct},0.1) end)
-    confirmBtn.MouseLeave:Connect(function() Tw(confirmBtn,{BackgroundColor3=T.SurfaceHov},0.1) end)
-    confirmBtn.MouseButton1Click:Connect(function()
-        local ok=false
-        for _,k in ipairs(validKeys) do if k==ibox.Text then ok=true; break end end
-        if ok then
-            statusLbl.TextColor3=T.Success; statusLbl.Text="✓ Poprawny klucz. Ładowanie..."
-            if saveKey and writefile then pcall(writefile,saveId..".txt",ibox.Text) end
-            task.wait(0.7); sg:Destroy(); callback()
-        else
-            statusLbl.TextColor3=T.Danger; statusLbl.Text="✕ Nieprawidłowy klucz."
-            Tw(ibg,{BackgroundColor3=Color3.fromRGB(50,22,22)},0.08)
-            task.wait(0.3); Tw(ibg,{BackgroundColor3=T.SurfaceAct},0.18)
+ 
+    -- Przycisk "Potwierdź"
+    local confirmBtn = New("TextButton", {
+        BackgroundColor3 = Color3.fromRGB(42, 42, 50),
+        BorderSizePixel  = 0,
+        Position         = UDim2.new(0, btnStartX, 0, 220),
+        Size             = UDim2.new(0, confirmW, 0, 34),
+        Text             = "Potwierdź klucz  →",
+        TextColor3       = Color3.fromRGB(210, 210, 225),
+        TextSize         = 11,
+        Font             = Enum.Font.GothamBold,
+        ZIndex           = 3,
+        Parent           = card,
+    })
+    Corner(8, confirmBtn)
+    local confirmStroke = Stroke(Color3.fromRGB(65, 65, 80), 1.5, confirmBtn)
+ 
+    confirmBtn.MouseEnter:Connect(function()
+        Tw(confirmBtn, { BackgroundColor3 = Color3.fromRGB(55, 55, 65) }, 0.1)
+        Tw(confirmStroke, { Color = Color3.fromRGB(130, 130, 155) }, 0.1)
+    end)
+    confirmBtn.MouseLeave:Connect(function()
+        Tw(confirmBtn, { BackgroundColor3 = Color3.fromRGB(42, 42, 50) }, 0.1)
+        Tw(confirmStroke, { Color = Color3.fromRGB(65, 65, 80) }, 0.1)
+    end)
+ 
+    -- ── Animacja shake karty przy błędzie ─────────────────────────────────────
+    local function shakeCard()
+        local orig = card.Position
+        local offsets = {8, -8, 6, -6, 4, -4, 0}
+        for _, ox in ipairs(offsets) do
+            card.Position = UDim2.new(orig.X.Scale, ox, orig.Y.Scale, orig.Y.Offset)
+            task.wait(0.04)
         end
+        card.Position = orig
+    end
+ 
+    -- ── Funkcja kicka ─────────────────────────────────────────────────────────
+    local function kickPlayer(msg)
+        -- animacja wyjścia przed kickiem
+        Tw(card, { Size = UDim2.new(0, CARD_W, 0, 0) }, 0.22,
+            Enum.EasingStyle.Back, Enum.EasingDirection.In)
+        Tw(overlay, { BackgroundTransparency = 1 }, 0.3)
+        task.wait(0.2)
+        removeBlur()
+        task.wait(0.2)
+        -- kick
+        local KickService = game:GetService("Players")
+        KickService.LocalPlayer:Kick(msg or "❌ Nieprawidłowy klucz xev0r.")
+    end
+ 
+    -- ── Logika potwierdzenia ──────────────────────────────────────────────────
+    local function tryConfirm()
+        local inputKey = ibox.Text
+        local valid    = false
+ 
+        for _, k in ipairs(validKeys) do
+            if k == inputKey then valid = true; break end
+        end
+ 
+        if valid then
+            -- ✓ Poprawny klucz
+            statusLbl.TextColor3 = T.Success
+            statusLbl.Text = "✓ Poprawny klucz — ładowanie..."
+            confirmBtn.Text = "✓  Weryfikacja zakończona"
+            confirmBtn.TextColor3 = T.Success
+            Tw(confirmStroke, { Color = T.Success }, 0.2)
+            Tw(ibgStroke, { Color = T.Success }, 0.2)
+ 
+            if saveKey and writefile then
+                pcall(writefile, saveId..".txt", inputKey)
+            end
+ 
+            -- Fade out karty + blur
+            task.wait(0.65)
+            Tw(card, { Size = UDim2.new(0, CARD_W, 0, 0) }, 0.28,
+                Enum.EasingStyle.Back, Enum.EasingDirection.In)
+            Tw(overlay, { BackgroundTransparency = 1 }, 0.35)
+            task.wait(0.3)
+            removeBlur()
+            task.wait(0.15)
+            sg:Destroy()
+            callback()
+ 
+        else
+            -- ✕ Błędny klucz
+            attempts = attempts + 1
+            shakeCard()
+ 
+            Tw(ibg, { BackgroundColor3 = Color3.fromRGB(40, 18, 18) }, 0.1)
+            Tw(ibgStroke, { Color = T.Danger }, 0.1)
+ 
+            if attempts >= maxAttempts then
+                statusLbl.TextColor3 = T.Danger
+                statusLbl.Text = "✕ Zbyt wiele błędnych prób — wyrzucanie..."
+                confirmBtn.Text = "Wyrzucanie..."
+                confirmBtn.TextColor3 = T.Danger
+                task.wait(1.2)
+                kickPlayer("❌ Nieprawidłowy klucz xev0r.\n\nZostałeś wyrzucony za podanie błędnego klucza.\nPobierz prawidłowy klucz i spróbuj ponownie."
+                    .. (keyLink ~= "" and ("\n\n🔑 " .. keyLink) or ""))
+            else
+                statusLbl.TextColor3 = T.Danger
+                statusLbl.Text = string.format(
+                    "✕ Nieprawidłowy klucz. Pozostało prób: %d",
+                    maxAttempts - attempts
+                )
+                task.wait(0.35)
+                Tw(ibg, { BackgroundColor3 = Color3.fromRGB(20, 20, 23) }, 0.2)
+                Tw(ibgStroke, { Color = Color3.fromRGB(36, 36, 42) }, 0.2)
+            end
+        end
+    end
+ 
+    confirmBtn.MouseButton1Click:Connect(tryConfirm)
+ 
+    -- Enter w polu też potwierdza
+    ibox.FocusLost:Connect(function(enterPressed)
+        if enterPressed then tryConfirm() end
     end)
 end
 
