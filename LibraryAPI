@@ -423,7 +423,6 @@ function xev0r:KeySystem(opt)
     local attempts    = 0
     local confirming  = false
 
-    -- Sprawdzenie zapisanego klucza
     if saveKey and readfile then
         local ok, saved = pcall(readfile, saveId .. ".txt")
         if ok and saved and saved ~= "" then
@@ -447,13 +446,7 @@ function xev0r:KeySystem(opt)
     local blur = New("BlurEffect", { Size = 0, Parent = Lighting })
     Tw(blur, { Size = 24 }, 0.35, Enum.EasingStyle.Quad)
 
-    New("Frame", {
-        BackgroundColor3 = Color3.fromRGB(0, 0, 0),
-        BackgroundTransparency = 0.45,
-        Size = UDim2.new(1, 0, 1, 0),
-        ZIndex = 1,
-        Parent = sg,
-    })
+    New("Frame", { BackgroundColor3 = Color3.fromRGB(0,0,0), BackgroundTransparency = 0.45, Size = UDim2.new(1,0,1,0), ZIndex = 1, Parent = sg })
 
     local CARD_W = 420
     local HAS_LINK = keyLink ~= ""
@@ -473,54 +466,15 @@ function xev0r:KeySystem(opt)
 
     Tw(card, { Size = UDim2.new(0, CARD_W, 0, CARD_H) }, 0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 
-    -- Ikona
-    local iconBg = New("Frame", {
-        BackgroundColor3 = T.Surface,
-        Size = UDim2.new(0, 64, 0, 64),
-        Position = UDim2.new(0.5, 0, 0, 24),
-        AnchorPoint = Vector2.new(0.5, 0),
-        ZIndex = 3,
-        Parent = card,
-    })
-    Corner(14, iconBg)
-    Stroke(T.Border, 1.5, iconBg)
-    New("TextLabel", {
-        BackgroundTransparency = 1,
-        Size = UDim2.new(1,0,1,0),
-        Text = "🔑",
-        TextColor3 = T.AccentHi or Color3.fromRGB(255, 140, 60),
-        TextSize = 28,
-        Font = Enum.Font.GothamBold,
-        ZIndex = 4,
-        Parent = iconBg,
-    })
+    -- Ikona + Title + Subtitle (bez zmian)
+    local iconBg = New("Frame", {BackgroundColor3 = T.Surface, Size = UDim2.new(0,64,0,64), Position = UDim2.new(0.5,0,0,24), AnchorPoint = Vector2.new(0.5,0), ZIndex = 3, Parent = card})
+    Corner(14, iconBg); Stroke(T.Border,1.5,iconBg)
+    New("TextLabel",{BackgroundTransparency=1,Size=UDim2.new(1,0,1,0),Text="🔑",TextColor3=T.AccentHi or Color3.fromRGB(255,140,60),TextSize=28,Font=Enum.Font.GothamBold,ZIndex=4,Parent=iconBg})
 
-    -- Title & Subtitle
-    New("TextLabel", {
-        BackgroundTransparency = 1,
-        Position = UDim2.new(0, 0, 0, 104),
-        Size = UDim2.new(1, 0, 0, 26),
-        Text = title,
-        TextColor3 = T.TextPri,
-        TextSize = 20,
-        Font = Enum.Font.GothamBold,
-        ZIndex = 3,
-        Parent = card,
-    })
+    New("TextLabel",{BackgroundTransparency=1,Position=UDim2.new(0,0,0,104),Size=UDim2.new(1,0,0,26),Text=title,TextColor3=T.TextPri,TextSize=20,Font=Enum.Font.GothamBold,ZIndex=3,Parent=card})
+    New("TextLabel",{BackgroundTransparency=1,Position=UDim2.new(0,0,0,130),Size=UDim2.new(1,0,0,16),Text=subtitle,TextColor3=T.TextSec,TextSize=11,Font=Enum.Font.Gotham,ZIndex=3,Parent=card})
 
-    New("TextLabel", {
-        BackgroundTransparency = 1,
-        Position = UDim2.new(0, 0, 0, 130),
-        Size = UDim2.new(1, 0, 0, 16),
-        Text = subtitle,
-        TextColor3 = T.TextSec,
-        TextSize = 11,
-        Font = Enum.Font.Gotham,
-        ZIndex = 3,
-        Parent = card,
-    })
-
-    -- Input Field
+    -- === POPRAWIONY INPUT ===
     local ibg = New("Frame", {
         BackgroundColor3 = T.Surface,
         Position = UDim2.new(0, 28, 0, 165),
@@ -535,6 +489,7 @@ function xev0r:KeySystem(opt)
         BackgroundTransparency = 1,
         Position = UDim2.new(0, 16, 0, 0),
         Size = UDim2.new(1, -32, 1, 0),
+        Text = "",                                   -- NAPRAWA
         PlaceholderText = "Please provide key",
         PlaceholderColor3 = T.TextMut,
         TextColor3 = T.TextPri,
@@ -545,38 +500,21 @@ function xev0r:KeySystem(opt)
         Parent = ibg,
     })
 
-    -- Focus effect
-    ibox.Focused:Connect(function()
-        Tw(ibgStroke, {Color = T.AccentHi}, 0.2)
-    end)
-    ibox.FocusLost:Connect(function()
-        Tw(ibgStroke, {Color = Color3.fromRGB(60, 60, 60)}, 0.2)
-    end)
+    ibox.Focused:Connect(function() Tw(ibgStroke, {Color = T.AccentHi}, 0.2) end)
+    ibox.FocusLost:Connect(function() Tw(ibgStroke, {Color = Color3.fromRGB(60,60,60)}, 0.2) end)
 
-    -- Buttons
+    -- Buttons (bez zmian)
     local btnY = 225
     local btnH = 42
     local padding = 28
     local gap = 14
 
     if HAS_LINK then
-        local getBtn = New("TextButton", {
-            BackgroundColor3 = T.Surface,
-            Position = UDim2.new(0, padding, 0, btnY),
-            Size = UDim2.new(0.5, -padding - gap/2, 0, btnH),
-            Text = "Get Key",
-            TextColor3 = T.TextSec,
-            TextSize = 13,
-            Font = Enum.Font.GothamBold,
-            ZIndex = 4,
-            Parent = card,
-        })
-        Corner(10, getBtn)
-        Stroke(T.Border, 1.5, getBtn)
-
+        local getBtn = New("TextButton", {BackgroundColor3 = T.Surface, Position = UDim2.new(0, padding, 0, btnY), Size = UDim2.new(0.5, -padding - gap/2, 0, btnH), Text = "Get Key", TextColor3 = T.TextSec, TextSize = 13, Font = Enum.Font.GothamBold, ZIndex = 4, Parent = card})
+        Corner(10, getBtn) Stroke(T.Border, 1.5, getBtn)
         getBtn.MouseButton1Click:Connect(function()
             if setclipboard then setclipboard(keyLink) end
-            xev0r:Notify({Title = "KeySystem", Message = "Link copied to clipboard!", Type = "info"})
+            xev0r:Notify({Title = "KeySystem", Message = "Link copied!", Type = "info"})
         end)
     end
 
@@ -585,13 +523,15 @@ function xev0r:KeySystem(opt)
         Position = HAS_LINK and UDim2.new(0.5, gap/2, 0, btnY) or UDim2.new(0, padding, 0, btnY),
         Size = HAS_LINK and UDim2.new(0.5, -padding - gap/2, 0, btnH) or UDim2.new(1, -padding*2, 0, btnH),
         Text = "Confirm",
-        TextColor3 = Color3.fromRGB(0, 0, 0),
+        TextColor3 = Color3.fromRGB(0,0,0),
         TextSize = 13.5,
         Font = Enum.Font.GothamBold,
         ZIndex = 4,
         Parent = card,
     })
     Corner(10, confirmBtn)
+
+    -- destroyUI i tryConfirm bez zmian (jak w poprzedniej wersji)
 
     local function destroyUI()
         Tw(blur, { Size = 0 }, 0.25)
