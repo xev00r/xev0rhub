@@ -1,65 +1,34 @@
-# xev0r UI Library v3.1
+<div align="center">
+  <h1>xev0r UI Library</h1>
+  <p><strong>Nowoczesna • Szybka • Estetyczna</strong> biblioteka interfejsu dla Roblox</p>
 
-**Nowoczesna, szybka i estetyczna biblioteka UI do Roblox **
-
-![Version](https://img.shields.io/badge/Version-3.1-blue)
-![Roblox](https://img.shields.io/badge/Roblox-Executor-orange)
-
----
-
-## ✨ Funkcje
-
-- **Piękny ciemny interfejs** (Grey/Black theme)
-- **Zaawansowany KeySystem** z zapisem klucza
-- **Płynne animacje** (tweeny + spring)
-- **Konfigurowalne okna** z zapisywaniem ustawień
-- **Tab system**
-- **Wszystkie popularne elementy UI**:
-  - Toggle, Slider, Dropdown, Button
-  - ColorPicker, Keybind, Input, Textarea
-  - ProgressBar, Separator, Label
-- **Notyfikacje** z animacjami
-- **Watermark** z FPS i czasem
-- **Auto config save/load**
+  ![Version](https://img.shields.io/badge/Version-3.1-blue?style=for-the-badge)
+  ![Roblox](https://img.shields.io/badge/Roblox-Executor-orange?style=for-the-badge)
+  ![Lua](https://img.shields.io/badge/Lua-5.1-yellow?style=for-the-badge)
+</div>
 
 ---
 
-## 📥 Instalacja / Użycie
+## ✨ Główne Funkcje
+
+- Zaawansowany **KeySystem** z zapisywaniem klucza
+- Płynne animacje (tweeny + spring effect)
+- System **Tabów** i sekcji
+- Konfigurowalne okna z auto save/load
+- Watermark z FPS i czasem
+- System notyfikacji (success, error, warning, info)
+- Elegancki ciemny design (Grey/Black Theme)
+
+---
+
+## 📥 Szybka Instalacja
 
 ```lua
 local xev0r = loadstring(game:HttpGet("https://raw.githubusercontent.com/xev00r/xev0rhub/main/LibraryAPI"))()
-Przykład użycia:
-Luaxev0r:KeySystem({
-    Title = "xev0r Hub",
-    Subtitle = "Enter key to continue",
-    Keys = {"xev0r-free", "twoj-klucz-vip"},
-    KeyLink = "https://twoj-link-do-klucza.com",
-    SaveKey = true,
-    Callback = function()
-        
-        local Window = xev0r:CreateWindow({
-            Title = "xev0r Hub",
-            Subtitle = "v3.1",
-            ConfigId = "moj_hub_config", -- do zapisywania configu
-        })
 
-        local Combat = Window:AddTab("Combat", "⚔")
-        Combat:AddSection("Aimbot")
+```
 
-        Combat:AddToggle("Silent Aim", "Automatyczne celowanie", false, function(state)
-            print("Silent Aim:", state)
-        end)
-
-        Combat:AddSlider("FOV", "Pole widzenia", 0, 360, 90, function(value)
-            print("FOV:", value)
-        end)
-
-        -- ... reszta Twojego skryptu
-    end
-})
-
-📋 Dostępne Metody
-Główne
+## 📋 Dostępne Metody Główne
 
 xev0r:KeySystem(options)
 xev0r:CreateWindow(options)
@@ -80,6 +49,49 @@ Tab:AddProgressBar()
 Tab:AddSection()
 Tab:AddSeparator()
 Tab:AddLabel()
+
+## 📖 Pełny Przykład Użycia
+
+xev0r:KeySystem({
+    Title = "xev0r Hub",
+    Subtitle = "Enter key to continue",
+    Keys = {"xev0r-free", "xev0r-vip"},
+    KeyLink = "https://twoj-link-do-klucza.com",
+    SaveKey = true,
+
+    Callback = function()
+        local Window = xev0r:CreateWindow({
+            Title = "xev0r Hub",
+            Subtitle = "v3.1",
+            ConfigId = "xev0r_main_config", -- potrzebne do zapisywania ustawień
+        })
+
+        -- TABY
+        local Combat = Window:AddTab("Combat", "⚔️")
+        Combat:AddSection("Aimbot")
+
+        Combat:AddToggle("Silent Aim", "Automatyczne celowanie", false, function(state)
+            print("Silent Aim:", state)
+        end)
+
+        Combat:AddSlider("FOV", "Pole widzenia aimbota", 40, 360, 120, function(value)
+            print("FOV:", value)
+        end)
+
+        Combat:AddDropdown("Cel", {"Head", "Torso", "Closest"}, "Head", function(selected)
+            print("Cel:", selected)
+        end)
+
+        local Visuals = Window:AddTab("Visuals", "👁️")
+        local Settings = Window:AddTab("Settings", "⚙️")
+
+        xev0r:Notify({
+            Title = "xev0r Hub",
+            Message = "Skrypt załadowany pomyślnie!",
+            Type = "success"
+        })
+    end
+})
 
 
 🎨 Theme
