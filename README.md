@@ -1,6 +1,6 @@
 # xev0r UI Library v3.1
 
-**Nowoczesna, szybka i estetyczna biblioteka UI do Roblox Executorów**
+**Nowoczesna, szybka i estetyczna biblioteka UI do Roblox **
 
 ![Version](https://img.shields.io/badge/Version-3.1-blue)
 ![Roblox](https://img.shields.io/badge/Roblox-Executor-orange)
@@ -93,9 +93,10 @@ Naprawione dragi (Slider + ColorPicker)
 Lepsze zarządzanie configiem
 Wyczyszczony i zoptymalizowany kod
 
+```
 
 📞 Kontakt / Discord
 
-Made with ❤️ by xev00r
+## Made with ❤️ by xev00r
 
-Gwiazdkuj repo jeśli Ci się podoba ⭐
+## Gwiazdkuj repo jeśli Ci się podoba ⭐
