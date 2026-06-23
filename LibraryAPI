@@ -413,7 +413,7 @@ function xev0r:KeySystem(opt)
     opt = opt or {}
     local validKeys   = opt.Keys        or { "xev0r-free" }
     local title       = opt.Title       or "xev0r Hub"
-    local subtitle    = opt.Subtitle    or "Wprowadź klucz aby kontynuować"
+    local subtitle    = opt.Subtitle    or "Enter key to continue"
     local keyLink     = opt.KeyLink     or ""
     local saveKey     = opt.SaveKey     ~= false
     local maxAttempts = opt.MaxAttempts or 3
@@ -495,7 +495,7 @@ function xev0r:KeySystem(opt)
         Parent = iconBg,
     })
 
-    -- Tytuł
+    -- Title & Subtitle
     New("TextLabel", {
         BackgroundTransparency = 1,
         Position = UDim2.new(0, 0, 0, 104),
@@ -520,7 +520,7 @@ function xev0r:KeySystem(opt)
         Parent = card,
     })
 
-    -- Input
+    -- Input Field
     local ibg = New("Frame", {
         BackgroundColor3 = T.Surface,
         Position = UDim2.new(0, 28, 0, 165),
@@ -535,7 +535,7 @@ function xev0r:KeySystem(opt)
         BackgroundTransparency = 1,
         Position = UDim2.new(0, 16, 0, 0),
         Size = UDim2.new(1, -32, 1, 0),
-        PlaceholderText = "Wklej klucz tutaj...",
+        PlaceholderText = "Please provide key",
         PlaceholderColor3 = T.TextMut,
         TextColor3 = T.TextPri,
         TextSize = 14,
@@ -545,6 +545,7 @@ function xev0r:KeySystem(opt)
         Parent = ibg,
     })
 
+    -- Focus effect
     ibox.Focused:Connect(function()
         Tw(ibgStroke, {Color = T.AccentHi}, 0.2)
     end)
@@ -552,7 +553,7 @@ function xev0r:KeySystem(opt)
         Tw(ibgStroke, {Color = Color3.fromRGB(60, 60, 60)}, 0.2)
     end)
 
-    -- === POPRAWIONE PRZYCISKI ===
+    -- Buttons
     local btnY = 225
     local btnH = 42
     local padding = 28
@@ -563,7 +564,7 @@ function xev0r:KeySystem(opt)
             BackgroundColor3 = T.Surface,
             Position = UDim2.new(0, padding, 0, btnY),
             Size = UDim2.new(0.5, -padding - gap/2, 0, btnH),
-            Text = "Pobierz klucz",
+            Text = "Get Key",
             TextColor3 = T.TextSec,
             TextSize = 13,
             Font = Enum.Font.GothamBold,
@@ -575,7 +576,7 @@ function xev0r:KeySystem(opt)
 
         getBtn.MouseButton1Click:Connect(function()
             if setclipboard then setclipboard(keyLink) end
-            xev0r:Notify({Title = "KeySystem", Message = "Link skopiowany!", Type = "info"})
+            xev0r:Notify({Title = "KeySystem", Message = "Link copied to clipboard!", Type = "info"})
         end)
     end
 
@@ -583,7 +584,7 @@ function xev0r:KeySystem(opt)
         BackgroundColor3 = T.Accent,
         Position = HAS_LINK and UDim2.new(0.5, gap/2, 0, btnY) or UDim2.new(0, padding, 0, btnY),
         Size = HAS_LINK and UDim2.new(0.5, -padding - gap/2, 0, btnH) or UDim2.new(1, -padding*2, 0, btnH),
-        Text = "Potwierdź",
+        Text = "Confirm",
         TextColor3 = Color3.fromRGB(0, 0, 0),
         TextSize = 13.5,
         Font = Enum.Font.GothamBold,
@@ -592,7 +593,6 @@ function xev0r:KeySystem(opt)
     })
     Corner(10, confirmBtn)
 
-    -- Reszta funkcji (destroyUI + tryConfirm) bez zmian
     local function destroyUI()
         Tw(blur, { Size = 0 }, 0.25)
         Tw(card, { Size = UDim2.new(0, 0, 0, 0), BackgroundTransparency = 1 }, 0.32, Enum.EasingStyle.Back, Enum.EasingDirection.In)
@@ -612,7 +612,7 @@ function xev0r:KeySystem(opt)
         end
 
         if valid then
-            confirmBtn.Text = "✓ Poprawny"
+            confirmBtn.Text = "✓ Success"
             confirmBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 100)
             if saveKey and writefile then pcall(writefile, saveId .. ".txt", input) end
             task.wait(0.8)
@@ -626,10 +626,10 @@ function xev0r:KeySystem(opt)
             confirming = false
 
             if attempts >= maxAttempts then
-                xev0r:Notify({Title = "KeySystem", Message = "Zbyt wiele prób!", Type = "error"})
+                xev0r:Notify({Title = "KeySystem", Message = "Too many incorrect attempts!", Type = "error"})
                 task.wait(1)
                 destroyUI()
-                Players.LocalPlayer:Kick("[xev0r] Za dużo niepoprawnych prób.")
+                Players.LocalPlayer:Kick("[xev0r] Too many incorrect attempts.")
             end
         end
     end
