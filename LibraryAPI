@@ -412,8 +412,8 @@ end
 function xev0r:KeySystem(opt)
     opt = opt or {}
     local validKeys   = opt.Keys        or { "xev0r-free" }
-    local title       = opt.Title       or "xev0r"
-    local subtitle    = opt.Subtitle    or "Wpisz klucz aby kontynuować"
+    local title       = opt.Title       or "xev0r Hub"
+    local subtitle    = opt.Subtitle    or "Wprowadź klucz aby kontynuować"
     local keyLink     = opt.KeyLink     or ""
     local saveKey     = opt.SaveKey     ~= false
     local maxAttempts = opt.MaxAttempts or 3
@@ -455,9 +455,9 @@ function xev0r:KeySystem(opt)
         Parent = sg,
     })
 
-    local CARD_W = 440
+    local CARD_W = 420
     local HAS_LINK = keyLink ~= ""
-    local CARD_H = HAS_LINK and 355 or 320
+    local CARD_H = HAS_LINK and 360 or 325
 
     local card = New("Frame", {
         BackgroundColor3 = T.BG,
@@ -468,48 +468,95 @@ function xev0r:KeySystem(opt)
         ZIndex = 2,
         Parent = sg,
     })
-    Corner(14, card)
+    Corner(16, card)
     Stroke(T.Border, 1.5, card)
 
     Tw(card, { Size = UDim2.new(0, CARD_W, 0, CARD_H) }, 0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 
     -- Ikona
-    local iconBg = New("Frame", {BackgroundColor3 = T.Surface, Size = UDim2.new(0, 56, 0, 56), Position = UDim2.new(0.5, 0, 0, 22), AnchorPoint = Vector2.new(0.5, 0), ZIndex = 3, Parent = card})
+    local iconBg = New("Frame", {
+        BackgroundColor3 = T.Surface,
+        Size = UDim2.new(0, 64, 0, 64),
+        Position = UDim2.new(0.5, 0, 0, 24),
+        AnchorPoint = Vector2.new(0.5, 0),
+        ZIndex = 3,
+        Parent = card,
+    })
     Corner(14, iconBg)
     Stroke(T.Border, 1.5, iconBg)
-    New("TextLabel", {BackgroundTransparency = 1, Size = UDim2.new(1,0,1,0), Text = "🔑", TextColor3 = T.AccentHi, TextSize = 26, Font = Enum.Font.GothamBold, ZIndex = 4, Parent = iconBg})
+    New("TextLabel", {
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1,0,1,0),
+        Text = "🔑",
+        TextColor3 = T.AccentHi or Color3.fromRGB(255, 140, 60),
+        TextSize = 28,
+        Font = Enum.Font.GothamBold,
+        ZIndex = 4,
+        Parent = iconBg,
+    })
 
-    -- Tytuły
-    New("TextLabel", {BackgroundTransparency = 1, Position = UDim2.new(0,0,0,92), Size = UDim2.new(1,0,0,24), Text = title, TextColor3 = T.TextPri, TextSize = 18, Font = Enum.Font.GothamBold, ZIndex = 3, Parent = card})
-    New("TextLabel", {BackgroundTransparency = 1, Position = UDim2.new(0,0,0,118), Size = UDim2.new(1,0,0,16), Text = subtitle, TextColor3 = T.TextSec, TextSize = 10, Font = Enum.Font.Gotham, ZIndex = 3, Parent = card})
+    -- Tytuł
+    New("TextLabel", {
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 0, 0, 104),
+        Size = UDim2.new(1, 0, 0, 26),
+        Text = title,
+        TextColor3 = T.TextPri,
+        TextSize = 20,
+        Font = Enum.Font.GothamBold,
+        ZIndex = 3,
+        Parent = card,
+    })
+
+    New("TextLabel", {
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 0, 0, 130),
+        Size = UDim2.new(1, 0, 0, 16),
+        Text = subtitle,
+        TextColor3 = T.TextSec,
+        TextSize = 11,
+        Font = Enum.Font.Gotham,
+        ZIndex = 3,
+        Parent = card,
+    })
 
     -- Input
-    local ibg = New("Frame", {BackgroundColor3 = T.Surface, Position = UDim2.new(0, 24, 0, 155), Size = UDim2.new(1, -48, 0, 42), ZIndex = 3, Parent = card})
-    Corner(9, ibg)
-    local ibgStroke = Stroke(T.Border, 1.5, ibg)
+    local ibg = New("Frame", {
+        BackgroundColor3 = T.Surface,
+        Position = UDim2.new(0, 28, 0, 165),
+        Size = UDim2.new(1, -56, 0, 46),
+        ZIndex = 3,
+        Parent = card,
+    })
+    Corner(12, ibg)
+    local ibgStroke = Stroke(Color3.fromRGB(60, 60, 60), 1.5, ibg)
 
     local ibox = New("TextBox", {
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 46, 0, 0),
-        Size = UDim2.new(1, -58, 1, 0),
+        Position = UDim2.new(0, 16, 0, 0),
+        Size = UDim2.new(1, -32, 1, 0),
         PlaceholderText = "Wklej klucz tutaj...",
         PlaceholderColor3 = T.TextMut,
         TextColor3 = T.TextPri,
-        TextSize = 13,
+        TextSize = 14,
         Font = Enum.Font.Gotham,
         ClearTextOnFocus = false,
         ZIndex = 4,
         Parent = ibg,
     })
 
-    ibox.Focused:Connect(function() Tw(ibgStroke, {Color = T.AccentHi}, 0.2) Tw(ibg, {BackgroundColor3 = T.SurfaceHov}, 0.2) end)
-    ibox.FocusLost:Connect(function() Tw(ibgStroke, {Color = T.Border}, 0.2) Tw(ibg, {BackgroundColor3 = T.Surface}, 0.2) end)
+    ibox.Focused:Connect(function()
+        Tw(ibgStroke, {Color = T.AccentHi}, 0.2)
+    end)
+    ibox.FocusLost:Connect(function()
+        Tw(ibgStroke, {Color = Color3.fromRGB(60, 60, 60)}, 0.2)
+    end)
 
     -- === POPRAWIONE PRZYCISKI ===
-    local btnY = HAS_LINK and 212 or 210
+    local btnY = 225
     local btnH = 42
-    local padding = 24
-    local gap = 12
+    local padding = 28
+    local gap = 14
 
     if HAS_LINK then
         local getBtn = New("TextButton", {
@@ -518,17 +565,17 @@ function xev0r:KeySystem(opt)
             Size = UDim2.new(0.5, -padding - gap/2, 0, btnH),
             Text = "Pobierz klucz",
             TextColor3 = T.TextSec,
-            TextSize = 12,
+            TextSize = 13,
             Font = Enum.Font.GothamBold,
             ZIndex = 4,
             Parent = card,
         })
-        Corner(9, getBtn)
+        Corner(10, getBtn)
         Stroke(T.Border, 1.5, getBtn)
 
         getBtn.MouseButton1Click:Connect(function()
             if setclipboard then setclipboard(keyLink) end
-            xev0r:Notify({Title = "KeySystem", Message = "Link skopiowany do schowka!", Type = "success"})
+            xev0r:Notify({Title = "KeySystem", Message = "Link skopiowany!", Type = "info"})
         end)
     end
 
@@ -537,14 +584,15 @@ function xev0r:KeySystem(opt)
         Position = HAS_LINK and UDim2.new(0.5, gap/2, 0, btnY) or UDim2.new(0, padding, 0, btnY),
         Size = HAS_LINK and UDim2.new(0.5, -padding - gap/2, 0, btnH) or UDim2.new(1, -padding*2, 0, btnH),
         Text = "Potwierdź",
-        TextColor3 = T.Black,
-        TextSize = 13,
+        TextColor3 = Color3.fromRGB(0, 0, 0),
+        TextSize = 13.5,
         Font = Enum.Font.GothamBold,
         ZIndex = 4,
         Parent = card,
     })
-    Corner(9, confirmBtn)
+    Corner(10, confirmBtn)
 
+    -- Reszta funkcji (destroyUI + tryConfirm) bez zmian
     local function destroyUI()
         Tw(blur, { Size = 0 }, 0.25)
         Tw(card, { Size = UDim2.new(0, 0, 0, 0), BackgroundTransparency = 1 }, 0.32, Enum.EasingStyle.Back, Enum.EasingDirection.In)
@@ -557,7 +605,7 @@ function xev0r:KeySystem(opt)
         if confirming then return end
         confirming = true
 
-        local input = ibox.Text:match("^%s*(.-)%s*$") -- trim
+        local input = ibox.Text:match("^%s*(.-)%s*$")
         local valid = false
         for _, k in ipairs(validKeys) do
             if input == k then valid = true break end
@@ -565,27 +613,20 @@ function xev0r:KeySystem(opt)
 
         if valid then
             confirmBtn.Text = "✓ Poprawny"
-            confirmBtn.BackgroundColor3 = T.Success or Color3.fromRGB(0, 170, 100)
-
-            if saveKey and writefile then
-                pcall(writefile, saveId .. ".txt", input)
-            end
-
+            confirmBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 100)
+            if saveKey and writefile then pcall(writefile, saveId .. ".txt", input) end
             task.wait(0.8)
             destroyUI()
             callback()
         else
             attempts += 1
-            confirmBtn.BackgroundColor3 = T.Danger or Color3.fromRGB(220, 50, 50)
-            ibg.BackgroundColor3 = Color3.fromRGB(45, 20, 20)
-
+            confirmBtn.BackgroundColor3 = Color3.fromRGB(220, 50, 50)
             task.wait(0.45)
             confirmBtn.BackgroundColor3 = T.Accent
-            ibg.BackgroundColor3 = T.Surface
             confirming = false
 
             if attempts >= maxAttempts then
-                xev0r:Notify({Title = "KeySystem", Message = "Zbyt wiele niepoprawnych prób!", Type = "error"})
+                xev0r:Notify({Title = "KeySystem", Message = "Zbyt wiele prób!", Type = "error"})
                 task.wait(1)
                 destroyUI()
                 Players.LocalPlayer:Kick("[xev0r] Za dużo niepoprawnych prób.")
@@ -594,9 +635,9 @@ function xev0r:KeySystem(opt)
     end
 
     confirmBtn.MouseButton1Click:Connect(tryConfirm)
-    ibox.FocusLost:Connect(function(enterPressed) if enterPressed then tryConfirm() end end)
+    ibox.FocusLost:Connect(function(enter) if enter then tryConfirm() end end)
 
-    task.delay(0.45, function()
+    task.delay(0.5, function()
         if ibox and ibox.Parent then ibox:CaptureFocus() end
     end)
 end
