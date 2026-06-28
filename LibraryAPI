@@ -24,15 +24,18 @@
 -- ─────────────────────────────────────────────────────────────────────────────
 --  SERVICES
 -- ─────────────────────────────────────────────────────────────────────────────
-local Players          = game:GetService("Players")
-local TweenService     = game:GetService("TweenService")
-local UserInputService = game:GetService("UserInputService")
-local RunService       = game:GetService("RunService")
-local HttpService      = game:GetService("HttpService")
-local Lighting         = game:GetService("Lighting")
+local __LIBRARYAPI_OK, __LIBRARYAPI_MODULE
 
-local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
-local PlayerGui   = LocalPlayer:WaitForChild("PlayerGui")
+__LIBRARYAPI_OK, __LIBRARYAPI_MODULE = xpcall(function()
+    local Players          = game:GetService("Players")
+    local TweenService     = game:GetService("TweenService")
+    local UserInputService = game:GetService("UserInputService")
+    local RunService       = game:GetService("RunService")
+    local HttpService      = game:GetService("HttpService")
+    local Lighting         = game:GetService("Lighting")
+
+    local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
+    local PlayerGui   = LocalPlayer:WaitForChild("PlayerGui")
 
 -- ─────────────────────────────────────────────────────────────────────────────
 --  THEME  (grey / black only)
@@ -1585,3 +1588,14 @@ function xev0r:CreateWindow(opt)
 end -- CreateWindow
 
 return xev0r
+end, function(err)
+    return err
+end)
+
+if __LIBRARYAPI_OK and type(__LIBRARYAPI_MODULE) == "table" then
+    print("yes")
+    return __LIBRARYAPI_MODULE
+else
+    print("no", tostring(__LIBRARYAPI_MODULE))
+    return nil
+end
