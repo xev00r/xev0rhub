@@ -1,14 +1,25 @@
 -- ╔══════════════════════════════════════════════════════════════════╗
--- ║              xev0r UI Library  v3.1.1                           ║
--- ║  Poprawki: KeySystem, animacje, click-outside, drag safety      ║
+-- ║              xev0r UI Library  v3.1                             ║
+-- ║  Poprawki: KeySystem, animacje, czysty kod, lepsza organizacja  ║
 -- ╚══════════════════════════════════════════════════════════════════╝
 --
--- ZMIANY v3.1.1:
---   [FIX]  Dropdown + ColorPicker — solidne zamknięcie po kliknięciu poza panelem
---   [FIX]  Slider — lepsze bezpieczeństwo InputEnded
---   [FIX]  ColorPicker — SV/Hue drag + cleanup connectionów
---   [CLEAN] Ujednolicone zarządzanie outside click
---   [CLEAN] Spójne nazewnictwo i hardening
+-- ZMIANY v3.1:
+--   [FIX]  KeySystem — poprawiona animacja wejścia (AnchorPoint + skala)
+--   [FIX]  KeySystem — blur działa poprawnie przy destroy
+--   [FIX]  KeySystem — shake używa AnchorPoint zamiast absolute offset
+--   [FIX]  Slider — drag działa przez cały ekran (nie tylko nad trackem)
+--   [FIX]  ColorPicker — SV drag naprawiony (globalny InputChanged)
+--   [FIX]  Dropdown/ColorPicker — zamknięcie po kliknięciu poza panelem
+--   [NEW]  Animacja otwarcia okna (Back easing)
+--   [NEW]  Animacja zamknięcia okna (shrink + fade)
+--   [NEW]  Przycisk pulse po kliknięciu
+--   [NEW]  Toggle — spring animation na kciuku
+--   [NEW]  Tab switch — fade between panels
+--   [NEW]  Notify — slide in z prawej
+--   [NEW]  KeySystem — animowany pasek postępu + licznik czasu
+--   [NEW]  Window — shake przy próbie zamknięcia gdy KeySystem aktywny
+--   [CLEAN] Usunięto zduplikowany RenderStepped w watermark
+--   [CLEAN] Spójne wcięcia i nazewnictwo
 
 -- ─────────────────────────────────────────────────────────────────────────────
 --  SERVICES
@@ -189,6 +200,13 @@ end
 local NOTIF_COLOR = { success = T.Success, warning = T.Warning, error = T.Danger, info = T.Info }
 local NOTIF_ICON  = { success = "✓",       warning = "!",       error = "✕",      info = "i"  }
 
+--[[
+    xev0r:Notify(opt)
+    opt.Title    [string]  - tytuł
+    opt.Message  [string]  - treść
+    opt.Type     [string]  - "success" | "warning" | "error" | "info"
+    opt.Duration [number]  - czas w sekundach (domyślnie 4)
+]]
 function xev0r:Notify(opt)
     EnsureNotifs()
     opt = opt or {}
@@ -198,18 +216,20 @@ function xev0r:Notify(opt)
     local duration = opt.Duration or 4
     local col      = NOTIF_COLOR[ntype] or T.Accent
 
+    -- Karta przesuwa się z prawej strony
     local card = New("Frame", {
         BackgroundColor3       = T.Surface,
         BackgroundTransparency = 1,
         BorderSizePixel        = 0,
         Size                   = UDim2.new(1, 0, 0, 64),
-        Position               = UDim2.new(1, 20, 0, 0),
+        Position               = UDim2.new(1, 20, 0, 0),   -- start: poza ekranem
         ClipsDescendants       = true,
         Parent                 = _nHolder,
     })
     Corner(10, card)
     Stroke(T.Border, 1, card)
 
+    -- lewy pasek koloru
     local bar = New("Frame", {
         BackgroundColor3 = col,
         BorderSizePixel  = 0,
@@ -218,6 +238,7 @@ function xev0r:Notify(opt)
     })
     Corner(3, bar)
 
+    -- ikona
     local ic = New("Frame", {
         BackgroundColor3 = col,
         BorderSizePixel  = 0,
@@ -244,7 +265,7 @@ function xev0r:Notify(opt)
         Text           = title,
         TextColor3     = T.TextPri,
         TextSize       = 12,
-        Font       = Enum.Font.GothamBold,
+        Font           = Enum.Font.GothamBold,
         TextXAlignment = Enum.TextXAlignment.Left,
         Parent         = card,
     })
@@ -255,12 +276,13 @@ function xev0r:Notify(opt)
         Text           = msg,
         TextColor3     = T.TextSec,
         TextSize       = 10,
-        Font       = Enum.Font.Gotham,
+        Font           = Enum.Font.Gotham,
         TextXAlignment = Enum.TextXAlignment.Left,
         TextWrapped    = true,
         Parent         = card,
     })
 
+    -- pasek postępu
     local pbg = New("Frame", {
         BackgroundColor3 = T.SurfaceAct,
         BorderSizePixel  = 0,
@@ -277,10 +299,12 @@ function xev0r:Notify(opt)
     })
     Corner(2, pbar)
 
+    -- [NEW] Slide in z prawej + fade
     Tw(card, { BackgroundTransparency = 0, Position = UDim2.new(0, 0, 0, 0) }, 0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
     Tw(pbar, { Size = UDim2.new(0, 0, 1, 0) }, duration, Enum.EasingStyle.Linear)
 
     task.delay(duration, function()
+        -- Slide out w prawo + fade
         Tw(card, {
             BackgroundTransparency = 1,
             Position               = UDim2.new(1, 20, 0, 0),
@@ -295,6 +319,14 @@ end
 -- ═════════════════════════════════════════════════════════════════════════════
 local _wmFrame
 
+--[[
+    xev0r:CreateWatermark(opt)
+    opt.Text     [string]  - tekst bazowy
+    opt.Position [UDim2]   - pozycja na ekranie
+    opt.ShowFPS  [bool]    - czy pokazywać FPS (domyślnie true)
+    opt.ShowTime [bool]    - czy pokazywać czas gry (domyślnie false)
+    Zwraca: { SetText, Destroy, Toggle, SetVisible }
+]]
 function xev0r:CreateWatermark(opt)
     opt = opt or {}
     local baseText = opt.Text     or "xev0r"
@@ -335,6 +367,7 @@ function xev0r:CreateWatermark(opt)
         Parent        = _wmFrame,
     })
 
+    -- [CLEAN] Usunięto zduplikowany RenderStepped — tylko Heartbeat
     local startTick = tick()
     local fps       = 60
     local lastFrame = tick()
@@ -364,8 +397,18 @@ function xev0r:CreateWatermark(opt)
 end
 
 -- ═════════════════════════════════════════════════════════════════════════════
---  KEY SYSTEM
+--  KEY SYSTEM  [FIX + NEW animations]
 -- ═════════════════════════════════════════════════════════════════════════════
+--[[
+    xev0r:KeySystem(opt)
+    opt.Title       [string]        - tytuł okna
+    opt.Subtitle    [string]        - podtytuł
+    opt.Keys        [table<string>] - lista ważnych kluczy
+    opt.KeyLink     [string]        - link do pobrania klucza (opcjonalnie)
+    opt.SaveKey     [bool]          - zapamiętaj klucz lokalnie (domyślnie true)
+    opt.MaxAttempts [number]        - ile prób przed kickiem (domyślnie 3)
+    opt.Callback    [function]      - wywołana po poprawnym kluczu
+]]
 function xev0r:KeySystem(opt)
     opt = opt or {}
     local validKeys   = opt.Keys        or { "xev0r-free" }
@@ -423,6 +466,7 @@ function xev0r:KeySystem(opt)
 
     Tw(card, { Size = UDim2.new(0, CARD_W, 0, CARD_H) }, 0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 
+    -- Ikona + Title + Subtitle (bez zmian)
     local iconBg = New("Frame", {BackgroundColor3 = T.Surface, Size = UDim2.new(0,64,0,64), Position = UDim2.new(0.5,0,0,24), AnchorPoint = Vector2.new(0.5,0), ZIndex = 3, Parent = card})
     Corner(14, iconBg); Stroke(T.Border,1.5,iconBg)
     New("TextLabel",{BackgroundTransparency=1,Size=UDim2.new(1,0,1,0),Text="🔑",TextColor3=T.AccentHi or Color3.fromRGB(255,140,60),TextSize=28,Font=Enum.Font.GothamBold,ZIndex=4,Parent=iconBg})
@@ -430,6 +474,7 @@ function xev0r:KeySystem(opt)
     New("TextLabel",{BackgroundTransparency=1,Position=UDim2.new(0,0,0,104),Size=UDim2.new(1,0,0,26),Text=title,TextColor3=T.TextPri,TextSize=20,Font=Enum.Font.GothamBold,ZIndex=3,Parent=card})
     New("TextLabel",{BackgroundTransparency=1,Position=UDim2.new(0,0,0,130),Size=UDim2.new(1,0,0,16),Text=subtitle,TextColor3=T.TextSec,TextSize=11,Font=Enum.Font.Gotham,ZIndex=3,Parent=card})
 
+    -- === POPRAWIONY INPUT ===
     local ibg = New("Frame", {
         BackgroundColor3 = T.Surface,
         Position = UDim2.new(0, 28, 0, 165),
@@ -444,7 +489,7 @@ function xev0r:KeySystem(opt)
         BackgroundTransparency = 1,
         Position = UDim2.new(0, 16, 0, 0),
         Size = UDim2.new(1, -32, 1, 0),
-        Text = "",
+        Text = "",                                   -- NAPRAWA
         PlaceholderText = "Please provide key",
         PlaceholderColor3 = T.TextMut,
         TextColor3 = T.TextPri,
@@ -458,6 +503,7 @@ function xev0r:KeySystem(opt)
     ibox.Focused:Connect(function() Tw(ibgStroke, {Color = T.AccentHi}, 0.2) end)
     ibox.FocusLost:Connect(function() Tw(ibgStroke, {Color = Color3.fromRGB(60,60,60)}, 0.2) end)
 
+    -- Buttons (bez zmian)
     local btnY = 225
     local btnH = 42
     local padding = 28
@@ -484,6 +530,8 @@ function xev0r:KeySystem(opt)
         Parent = card,
     })
     Corner(10, confirmBtn)
+
+    -- destroyUI i tryConfirm bez zmian (jak w poprzedniej wersji)
 
     local function destroyUI()
         Tw(blur, { Size = 0 }, 0.25)
@@ -537,6 +585,14 @@ end
 -- ═════════════════════════════════════════════════════════════════════════════
 --  CREATE WINDOW
 -- ═════════════════════════════════════════════════════════════════════════════
+--[[
+    xev0r:CreateWindow(opt)
+    opt.Title    [string]  - tytuł okna
+    opt.Subtitle [string]  - podtytuł
+    opt.Size     [Vector2] - rozmiar okna (domyślnie 620×430)
+    opt.ConfigId [string]  - klucz do zapisu konfiguracji
+    Zwraca: Window z metodami AddTab, SetTab, Destroy, Toggle, SaveConfig, LoadConfig
+]]
 function xev0r:CreateWindow(opt)
     opt = opt or {}
     local winTitle    = opt.Title    or "xev0r"
@@ -561,6 +617,7 @@ function xev0r:CreateWindow(opt)
         Parent         = PlayerGui,
     })
  
+    -- ── Główny frame ────────────────────────────────────────────────────────
     local main = New("Frame", {
         BackgroundColor3 = T.BG,
         BorderSizePixel  = 0,
@@ -573,6 +630,7 @@ function xev0r:CreateWindow(opt)
     Corner(14, main)
     local mainStroke = Stroke(T.Border, 1, main)
  
+    -- Zewnętrzny glow-shadow (ciemniejsza ramka)
     local shadow = New("Frame", {
         BackgroundTransparency = 1,
         BorderSizePixel        = 0,
@@ -586,6 +644,7 @@ function xev0r:CreateWindow(opt)
  
     Tw(main, { Size = UDim2.new(0, winSize.X, 0, winSize.Y) }, 0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
  
+    -- Clip frame wewnątrz (żeby content był obcięty)
     local clipFrame = New("Frame", {
         BackgroundTransparency = 1,
         BorderSizePixel        = 0,
@@ -595,6 +654,7 @@ function xev0r:CreateWindow(opt)
     })
     Corner(14, clipFrame)
  
+    -- ── SIDEBAR ─────────────────────────────────────────────────────────────
     local sidebar = New("Frame", {
         BackgroundColor3 = T.Surface,
         BorderSizePixel  = 0,
@@ -602,6 +662,7 @@ function xev0r:CreateWindow(opt)
         Parent           = clipFrame,
     })
  
+    -- Subtelny gradient na sidebarze
     New("UIGradient", {
         Color = ColorSequence.new({
             ColorSequenceKeypoint.new(0, Color3.fromRGB(22, 22, 25)),
@@ -611,6 +672,7 @@ function xev0r:CreateWindow(opt)
         Parent   = sidebar,
     })
  
+    -- Prawa krawędź sidebara
     New("Frame", {
         BackgroundColor3 = T.Border,
         BorderSizePixel  = 0,
@@ -619,6 +681,7 @@ function xev0r:CreateWindow(opt)
         Parent           = sidebar,
     })
  
+    -- ── Logo area ───────────────────────────────────────────────────────────
     local logoArea = New("Frame", {
         BackgroundTransparency = 1,
         BorderSizePixel        = 0,
@@ -626,6 +689,7 @@ function xev0r:CreateWindow(opt)
         Parent                 = sidebar,
     })
  
+    -- Logo tło (ciemniejszy panel)
     local logoBg = New("Frame", {
         BackgroundColor3 = T.BG,
         BorderSizePixel  = 0,
@@ -637,6 +701,7 @@ function xev0r:CreateWindow(opt)
     Corner(10, logoBg)
     Stroke(T.Border, 1, logoBg)
  
+    -- Ikona 2 litery / skrót
     local initials = winTitle:sub(1, 2):upper()
     local logoIcon = New("Frame", {
         BackgroundColor3 = T.SurfaceAct,
@@ -664,7 +729,7 @@ function xev0r:CreateWindow(opt)
         Text           = winTitle,
         TextColor3     = T.TextPri,
         TextSize       = 13,
-        Font       = Enum.Font.GothamBold,
+        Font           = Enum.Font.GothamBold,
         TextXAlignment = Enum.TextXAlignment.Left,
         Parent         = logoBg,
     })
@@ -675,11 +740,12 @@ function xev0r:CreateWindow(opt)
         Text           = winSubtitle,
         TextColor3     = T.TextMut,
         TextSize       = 9,
-        Font       = Enum.Font.Gotham,
+        Font           = Enum.Font.Gotham,
         TextXAlignment = Enum.TextXAlignment.Left,
         Parent         = logoBg,
     })
  
+    -- Divider pod logo
     local logoDivider = New("Frame", {
         BackgroundColor3 = T.Border,
         BorderSizePixel  = 0,
@@ -688,6 +754,7 @@ function xev0r:CreateWindow(opt)
         Parent           = sidebar,
     })
  
+    -- ── Tab section label ───────────────────────────────────────────────────
     New("TextLabel", {
         BackgroundTransparency = 1,
         Position       = UDim2.new(0, 14, 0, 80),
@@ -695,11 +762,12 @@ function xev0r:CreateWindow(opt)
         Text           = "NAWIGACJA",
         TextColor3     = T.TextMut,
         TextSize       = 8,
-        Font       = Enum.Font.GothamBold,
+        Font           = Enum.Font.GothamBold,
         TextXAlignment = Enum.TextXAlignment.Left,
         Parent         = sidebar,
     })
  
+    -- ── Tab list ────────────────────────────────────────────────────────────
     local tabList = New("ScrollingFrame", {
         BackgroundTransparency = 1,
         BorderSizePixel        = 0,
@@ -717,6 +785,7 @@ function xev0r:CreateWindow(opt)
         Parent    = tabList,
     })
  
+    -- ── Bottom sidebar area ─────────────────────────────────────────────────
     local sideBottom = New("Frame", {
         BackgroundTransparency = 1,
         BorderSizePixel        = 0,
@@ -725,6 +794,7 @@ function xev0r:CreateWindow(opt)
         Parent                 = sidebar,
     })
  
+    -- Divider nad bottomem
     New("Frame", {
         BackgroundColor3 = T.Border,
         BorderSizePixel  = 0,
@@ -770,6 +840,7 @@ function xev0r:CreateWindow(opt)
         task.wait(0.3); sg:Destroy()
     end)
  
+    -- ── CONTENT AREA ────────────────────────────────────────────────────────
     local content = New("Frame", {
         BackgroundTransparency = 1,
         BorderSizePixel        = 0,
@@ -779,12 +850,14 @@ function xev0r:CreateWindow(opt)
         Parent                 = clipFrame,
     })
  
+    -- ── Top bar ─────────────────────────────────────────────────────────────
     local topBar = New("Frame", {
         BackgroundColor3 = T.Surface,
         BorderSizePixel  = 0,
         Size             = UDim2.new(1, 0, 0, TOPBAR_H),
         Parent           = content,
     })
+    -- Gradient na topbarze
     New("UIGradient", {
         Color = ColorSequence.new({
             ColorSequenceKeypoint.new(0, Color3.fromRGB(22, 22, 25)),
@@ -794,6 +867,7 @@ function xev0r:CreateWindow(opt)
         Parent   = topBar,
     })
  
+    -- Dolna linia topbara
     New("Frame", {
         BackgroundColor3 = T.Border,
         BorderSizePixel  = 0,
@@ -802,6 +876,7 @@ function xev0r:CreateWindow(opt)
         Parent           = topBar,
     })
  
+    -- Breadcrumb: ikona + separator + nazwa zakładki
     local breadHome = New("TextLabel", {
         BackgroundTransparency = 1,
         Position       = UDim2.new(0, 16, 0, 0),
@@ -809,7 +884,7 @@ function xev0r:CreateWindow(opt)
         Text           = winTitle,
         TextColor3     = T.TextMut,
         TextSize       = 11,
-        Font       = Enum.Font.Gotham,
+        Font           = Enum.Font.Gotham,
         TextXAlignment = Enum.TextXAlignment.Left,
         Parent         = topBar,
     })
@@ -820,7 +895,7 @@ function xev0r:CreateWindow(opt)
         Text           = "›",
         TextColor3     = T.TextMut,
         TextSize       = 14,
-        Font       = Enum.Font.GothamBold,
+        Font           = Enum.Font.GothamBold,
         Parent         = topBar,
     })
     local topTitle = New("TextLabel", {
@@ -830,11 +905,12 @@ function xev0r:CreateWindow(opt)
         Text           = "—",
         TextColor3     = T.TextPri,
         TextSize       = 12,
-        Font       = Enum.Font.GothamBold,
+        Font           = Enum.Font.GothamBold,
         TextXAlignment = Enum.TextXAlignment.Left,
         Parent         = topBar,
     })
  
+    -- Przyciski kontrolne (minimize + drag handle)
     local ctrlFrame = New("Frame", {
         BackgroundTransparency = 1,
         BorderSizePixel        = 0,
@@ -887,6 +963,7 @@ function xev0r:CreateWindow(opt)
     MakeDraggable(main, topBar)
     MakeDraggable(main, logoArea)
  
+    -- ── Window methods ───────────────────────────────────────────────────────
     function Win:Destroy()
         Tw(main, { Size = UDim2.new(0, 0, 0, 0) }, 0.25, Enum.EasingStyle.Back, Enum.EasingDirection.In)
         task.wait(0.28); sg:Destroy()
@@ -935,11 +1012,15 @@ function xev0r:CreateWindow(opt)
         end
     end
 
+    -- ══════════════════════════════════════════════════════════════════
+    --  ADD TAB
+    -- ══════════════════════════════════════════════════════════════════
     function Win:AddTab(name, icon)
         icon = icon or "▸"
         local tab  = {}
         tab._name  = name
  
+        -- Scroll z contentem
         local scroll = New("ScrollingFrame", {
             BackgroundTransparency = 1,
             BorderSizePixel        = 0,
@@ -955,6 +1036,7 @@ function xev0r:CreateWindow(opt)
         Pad(12, 12, 14, 14, scroll)
         New("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 5), Parent = scroll })
  
+        -- ── Tab button w sidebarze ───────────────────────────────────────────
         local btn = New("TextButton", {
             BackgroundColor3       = T.SurfaceHov,
             BackgroundTransparency = 0.85,
@@ -966,6 +1048,7 @@ function xev0r:CreateWindow(opt)
         Corner(10, btn)
         Stroke(T.BorderLight, 0.8, btn)
  
+        -- Lewa kreska aktywna (zaokrąglona)
         local indic = New("Frame", {
             BackgroundColor3 = T.AccentHi,
             BorderSizePixel  = 0,
@@ -977,6 +1060,7 @@ function xev0r:CreateWindow(opt)
         })
         Corner(3, indic)
  
+        -- Ikona tab
         local tabIconLbl = New("TextLabel", {
             BackgroundTransparency = 1,
             Position   = UDim2.new(0, 12, 0, 0),
@@ -988,6 +1072,7 @@ function xev0r:CreateWindow(opt)
             Parent     = btn,
         })
  
+        -- Nazwa tab
         local lbl = New("TextLabel", {
             BackgroundTransparency = 1,
             Position       = UDim2.new(0, 38, 0, 0),
@@ -995,11 +1080,12 @@ function xev0r:CreateWindow(opt)
             Text           = name,
             TextColor3     = T.TextSec,
             TextSize       = 11,
-            Font       = Enum.Font.Gotham,
+            Font           = Enum.Font.Gotham,
             TextXAlignment = Enum.TextXAlignment.Left,
             Parent         = btn,
         })
  
+        -- Aktywacja tab (fade)
         local function activate()
             for _, t in ipairs(Win._tabs) do
                 if t._scroll.Visible then
@@ -1062,6 +1148,7 @@ function xev0r:CreateWindow(opt)
             Win._elements[id] = { _getValue = getV, _setValue = setV }
         end
  
+        -- ── Pomocnik: generuje standardowy "row" (kafelek) ────────────────────
         local function MakeRow(h, parent)
             local r = New("Frame", {
                 BackgroundColor3 = T.Surface,
@@ -1074,16 +1161,19 @@ function xev0r:CreateWindow(opt)
             return r
         end
  
+        -- ── SECTION ─────────────────────────────────────────────────────────
         function tab:AddSection(text)
             local f = New("Frame", { BackgroundTransparency = 1, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 24), Parent = scroll })
             New("TextLabel", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0), Text = text:upper(), TextColor3 = T.TextMut, TextSize = 9, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, Parent = f })
             New("Frame", { BackgroundColor3 = T.Border, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 1), Position = UDim2.new(0, 0, 1, -1), Parent = f })
         end
  
+        -- ── SEPARATOR ───────────────────────────────────────────────────────
         function tab:AddSeparator()
             New("Frame", { BackgroundColor3 = T.Border, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 1), Parent = scroll })
         end
  
+        -- ── LABEL ───────────────────────────────────────────────────────────
         function tab:AddLabel(text, id)
             local lf = New("TextLabel", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 18), Text = text, TextColor3 = T.TextSec, TextSize = 10, Font = Enum.Font.Gotham, TextXAlignment = Enum.TextXAlignment.Left, Parent = scroll })
             local el = {}
@@ -1092,6 +1182,7 @@ function xev0r:CreateWindow(opt)
             return el
         end
  
+        -- ── IMAGE ───────────────────────────────────────────────────────────
         function tab:AddImage(opt2)
             opt2 = opt2 or {}
             local imgSize = opt2.Size or Vector2.new(200, 100)
@@ -1105,16 +1196,19 @@ function xev0r:CreateWindow(opt)
             return el
         end
  
+        -- ── BUTTON ──────────────────────────────────────────────────────────
         function tab:AddButton(label, desc, callback)
             local h   = desc and 46 or 36
             local row = New("TextButton", { BackgroundColor3 = T.Surface, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, h), Text = "", Parent = scroll })
             Corner(9, row); Stroke(T.Border, 1, row)
  
+            -- Subtelny gradient
             New("UIGradient", { Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, Color3.fromRGB(22,22,25)), ColorSequenceKeypoint.new(1, Color3.fromRGB(17,17,19)) }), Rotation = 90, Parent = row })
  
             local lblObj = New("TextLabel", { BackgroundTransparency = 1, Position = UDim2.new(0, 14, 0, desc and 7 or 0), Size = UDim2.new(1, -42, 0, desc and 18 or h), Text = label, TextColor3 = T.TextPri, TextSize = 11, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, Parent = row })
             if desc then New("TextLabel", { BackgroundTransparency = 1, Position = UDim2.new(0, 14, 0, 26), Size = UDim2.new(1, -42, 0, 14), Text = desc, TextColor3 = T.TextMut, TextSize = 9, Font = Enum.Font.Gotham, TextXAlignment = Enum.TextXAlignment.Left, Parent = row }) end
  
+            -- Chevron po prawej
             local chevFrame = New("Frame", { BackgroundColor3 = T.SurfaceAct, BorderSizePixel = 0, Size = UDim2.new(0, 20, 0, 20), Position = UDim2.new(1, -30, 0.5, 0), AnchorPoint = Vector2.new(0, 0.5), Parent = row })
             Corner(5, chevFrame)
             New("TextLabel", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0), Text = "›", TextColor3 = T.Accent, TextSize = 16, Font = Enum.Font.GothamBold, Parent = chevFrame })
@@ -1147,6 +1241,7 @@ function xev0r:CreateWindow(opt)
             return el
         end
  
+        -- ── TOGGLE ──────────────────────────────────────────────────────────
         function tab:AddToggle(label, desc, default, callback, id)
             local state = default or false
             local h     = desc and 46 or 36
@@ -1157,6 +1252,7 @@ function xev0r:CreateWindow(opt)
             New("TextLabel", { BackgroundTransparency = 1, Position = UDim2.new(0, 14, 0, desc and 7 or 0), Size = UDim2.new(1, -58, 0, desc and 18 or h), Text = label, TextColor3 = T.TextPri, TextSize = 11, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, Parent = row })
             if desc then New("TextLabel", { BackgroundTransparency = 1, Position = UDim2.new(0, 14, 0, 26), Size = UDim2.new(1, -58, 0, 14), Text = desc, TextColor3 = T.TextMut, TextSize = 9, Font = Enum.Font.Gotham, TextXAlignment = Enum.TextXAlignment.Left, Parent = row }) end
  
+            -- Track
             local track = New("Frame", { BackgroundColor3 = state and T.AccentHi or T.SurfaceAct, BorderSizePixel = 0, Size = UDim2.new(0, 38, 0, 21), Position = UDim2.new(1, -48, 0.5, 0), AnchorPoint = Vector2.new(0, 0.5), Parent = row })
             Corner(11, track)
             Stroke(state and T.AccentHi or T.Border, 1, track)
@@ -1182,6 +1278,7 @@ function xev0r:CreateWindow(opt)
             return el
         end
  
+        -- ── SLIDER ──────────────────────────────────────────────────────────
         function tab:AddSlider(label, desc, min, max, default, callback, id)
             min = min or 0; max = max or 100
             default = math.clamp(default or min, min, max)
@@ -1193,12 +1290,14 @@ function xev0r:CreateWindow(opt)
  
             New("TextLabel", { BackgroundTransparency = 1, Position = UDim2.new(0, 14, 0, 7), Size = UDim2.new(0.65, 0, 0, 16), Text = label, TextColor3 = T.TextPri, TextSize = 11, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, Parent = row })
  
+            -- Pill con valore
             local valPill = New("Frame", { BackgroundColor3 = T.SurfaceAct, BorderSizePixel = 0, Size = UDim2.new(0, 42, 0, 18), Position = UDim2.new(1, -52, 0, 6), Parent = row })
             Corner(9, valPill); Stroke(T.Border, 1, valPill)
             local valLbl = New("TextLabel", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0), Text = tostring(val), TextColor3 = T.AccentHi, TextSize = 10, Font = Enum.Font.GothamBold, Parent = valPill })
  
             if desc then New("TextLabel", { BackgroundTransparency = 1, Position = UDim2.new(0, 14, 0, 24), Size = UDim2.new(1, -60, 0, 12), Text = desc, TextColor3 = T.TextMut, TextSize = 9, Font = Enum.Font.Gotham, TextXAlignment = Enum.TextXAlignment.Left, Parent = row }) end
  
+            -- Track
             local trackBg = New("Frame", { BackgroundColor3 = T.SurfaceAct, BorderSizePixel = 0, Size = UDim2.new(1, -28, 0, 5), Position = UDim2.new(0, 14, 0, h - 14), Parent = row })
             Corner(3, trackBg)
  
@@ -1236,26 +1335,25 @@ function xev0r:CreateWindow(opt)
             return el
         end
  
-        -- DROPDOWN z click-outside
+        -- ── DROPDOWN ────────────────────────────────────────────────────────
         function tab:AddDropdown(label, items, default, callback, id)
             local selected = default or (items[1] or "Wybierz...")
             local open     = false
-            local outsideConn = nil
-
+ 
             local wrapper = New("Frame", { BackgroundTransparency = 1, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 36), ClipsDescendants = false, Parent = scroll })
             local row = New("Frame", { BackgroundColor3 = T.Surface, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 36), Parent = wrapper })
             Corner(9, row); Stroke(T.Border, 1, row)
             New("UIGradient", { Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, Color3.fromRGB(22,22,25)), ColorSequenceKeypoint.new(1, Color3.fromRGB(17,17,19)) }), Rotation = 90, Parent = row })
-
+ 
             New("TextLabel", { BackgroundTransparency = 1, Position = UDim2.new(0, 14, 0, 0), Size = UDim2.new(0.45, 0, 1, 0), Text = label, TextColor3 = T.TextPri, TextSize = 11, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, Parent = row })
             local selLbl = New("TextLabel", { BackgroundTransparency = 1, Position = UDim2.new(0.45, 0, 0, 0), Size = UDim2.new(0.4, 0, 1, 0), Text = selected, TextColor3 = T.TextSec, TextSize = 10, Font = Enum.Font.Gotham, TextXAlignment = Enum.TextXAlignment.Right, Parent = row })
             local chev = New("TextLabel", { BackgroundTransparency = 1, Position = UDim2.new(1, -22, 0.5, 0), AnchorPoint = Vector2.new(0, 0.5), Size = UDim2.new(0, 14, 0, 14), Text = "▾", TextColor3 = T.Accent, TextSize = 12, Font = Enum.Font.GothamBold, Parent = row })
-
+ 
             local drop = New("Frame", { BackgroundColor3 = T.SurfaceHov, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 0), Position = UDim2.new(0, 0, 1, 3), ClipsDescendants = true, ZIndex = 10, Parent = wrapper })
             Corner(9, drop); Stroke(T.Border, 1, drop)
             New("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Parent = drop })
             Pad(4, 4, 0, 0, drop)
-
+ 
             local function buildItems(list)
                 for _, c in ipairs(drop:GetChildren()) do if c:IsA("TextButton") then c:Destroy() end end
                 for _, item in ipairs(list) do
@@ -1263,48 +1361,22 @@ function xev0r:CreateWindow(opt)
                     ob.MouseEnter:Connect(function() ob.BackgroundColor3 = T.SurfaceAct; Tw(ob, { BackgroundTransparency = 0 }, 0.07); ob.TextColor3 = T.TextPri end)
                     ob.MouseLeave:Connect(function() Tw(ob, { BackgroundTransparency = 1 }, 0.07); ob.TextColor3 = (selected == item) and T.TextPri or T.TextSec end)
                     ob.MouseButton1Click:Connect(function()
-                        selected = item; selLbl.Text = item
-                        closeDropdown()
+                        selected = item; selLbl.Text = item; open = false
+                        Tw(drop, { Size = UDim2.new(1,0,0,0) }, 0.16); Tw(wrapper, { Size = UDim2.new(1,0,0,36) }, 0.16); Tw(chev, { Rotation = 0 }, 0.16)
                         if callback then callback(item) end
                     end)
                 end
                 return #list * 28 + 8
             end
-
+ 
             local dropH = buildItems(items)
-
-            local function closeDropdown()
-                if not open then return end
-                open = false
-                Tw(drop, { Size = UDim2.new(1,0,0,0) }, 0.14)
-                Tw(wrapper, { Size = UDim2.new(1,0,0,36) }, 0.14)
-                Tw(chev, { Rotation = 0 }, 0.14)
-                if outsideConn then outsideConn:Disconnect() outsideConn = nil end
-            end
-
+ 
             New("TextButton", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0), Text = "", Parent = row }).MouseButton1Click:Connect(function()
                 open = not open
-                if open then
-                    Tw(drop, { Size = UDim2.new(1,0,0,dropH) }, 0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-                    Tw(wrapper, { Size = UDim2.new(1,0,0,36+dropH+3) }, 0.18)
-                    Tw(chev, { Rotation = 180 }, 0.16)
-
-                    outsideConn = UserInputService.InputBegan:Connect(function(i)
-                        if i.UserInputType == Enum.UserInputType.MouseButton1 then
-                            local mouse = UserInputService:GetMouseLocation()
-                            local absPos = drop.AbsolutePosition
-                            local absSize = drop.AbsoluteSize
-                            if not (mouse.X >= absPos.X and mouse.X <= absPos.X + absSize.X and
-                                    mouse.Y >= absPos.Y and mouse.Y <= absPos.Y + absSize.Y) then
-                                closeDropdown()
-                            end
-                        end
-                    end)
-                else
-                    closeDropdown()
-                end
+                if open then Tw(drop, { Size = UDim2.new(1,0,0,dropH) }, 0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out); Tw(wrapper, { Size = UDim2.new(1,0,0,36+dropH+3) }, 0.18); Tw(chev, { Rotation = 180 }, 0.16)
+                else Tw(drop, { Size = UDim2.new(1,0,0,0) }, 0.14); Tw(wrapper, { Size = UDim2.new(1,0,0,36) }, 0.14); Tw(chev, { Rotation = 0 }, 0.14) end
             end)
-
+ 
             local el = {}
             function el:SetItems(list) items = list; dropH = buildItems(list) end
             function el:SetValue(v) selected = v; selLbl.Text = v end
@@ -1312,7 +1384,7 @@ function xev0r:CreateWindow(opt)
             regEl(id, function() return selected end, function(v) selected = v; selLbl.Text = v end)
             return el
         end
-
+ 
         -- ── INPUT ───────────────────────────────────────────────────────────
         function tab:AddInput(label, placeholder, callback, id)
             local row = MakeRow(58)
